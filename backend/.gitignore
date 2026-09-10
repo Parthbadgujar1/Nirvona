@@ -1,0 +1,49 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+/vendor/
+composer.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+storage/logs/*.log
+storage/logs/*
+
+# Cache
+storage/cache/*
+.php_cs_fixer.cache
+
+# Testing
+/coverage/
+.phpunit.result.cache
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+
+# Build artifacts
+/build/
+/dist/
+
+# Node (if using npm for frontend tools)
+node_modules/
+package-lock.json
+
+# Database
+*.sqlite
+*.sqlite3
+
+# OS
+Thumbs.db
+.DS_Store
