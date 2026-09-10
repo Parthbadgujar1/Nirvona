@@ -1,0 +1,43 @@
+parameters:
+  level: 8
+  paths:
+    - app
+    - routes
+  excludePaths:
+    - %currentWorkingDirectory%/vendor
+    - %currentWorkingDirectory%/storage
+    - %currentWorkingDirectory%/tests
+  phpVersion: 80200
+  checkGenericClassInNonGenericObjectType: true
+  checkMissingIterableValueType: true
+  reportMaybeUndefinedVariables: true
+  reportPossiblyNonexistentGeneralArrayOffset: true
+  reportPossiblyNonexistentStringOffsetAccess: true
+  reportStaticMethodCanBeNonStatic: true
+  reportUnnecessaryNullsafePropertyAccess: true
+  reportUnnecessaryNullsafeMethodCall: true
+  reportConstantEscapeSequence: true
+  reportInvalidPhpDocTag: true
+  reportMissingProperty: true
+  reportMissingReturn: true
+  reportUnusedFunctionCalls: true
+  reportUnusedMethodCalls: true
+  reportUnusedPrivateMethod: true
+  treatPhpDocTypesAsCertain: true
+
+includes:
+  - phar://phpstan.phar/conf/bleedingEdge.neon
+
+rules:
+  - PHPStan\Rules\Deprecations\DeprecatedClassConstantRule
+  - PHPStan\Rules\Deprecations\DeprecatedConstantRule
+  - PHPStan\Rules\Deprecations\DeprecatedFunctionRule
+  - PHPStan\Rules\Deprecations\DeprecatedMethodRule
+  - PHPStan\Rules\Deprecations\DeprecatedPropertyRule
+  - PHPStan\Rules\Deprecations\DeprecatedVariableRule
+
+ignoreErrors:
+  # Allow some common Slim framework patterns
+  - '#^Parameter \$response of method Slim.*? expects Psr\\Http\\Message\\ResponseInterface, Psr\\Http\\Message\\ResponseInterface given\.$#'
+  # Allow request/response interface patterns
+  - '#^Access to undefined constant Slim#'
