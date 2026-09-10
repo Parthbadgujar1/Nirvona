@@ -29,28 +29,64 @@ import {
 import type { UploadValidationResult } from "@/types";
 import { resolve } from "./http";
 
+/**
+ * Admin Service - Backend Integrated
+ *
+ * Routes:
+ * - GET /api/admin/dashboard - Admin dashboard stats
+ * - GET /api/admin/students - List all students
+ * - GET /api/admin/payments - List payments
+ * - GET /api/admin/exams - List exams
+ * - GET /api/admin/exams/:id - Get exam details
+ * - GET /api/admin/exam-centres - List exam centres
+ * - POST /api/admin/results/publish - Publish exam results
+ * - POST /api/admin/credentials/validate - Validate credential upload
+ */
 export const adminService = {
-  stats: () => resolve(ADMIN_STATS),
-  activity: () => resolve(ACTIVITY),
-  students: () => resolve(STUDENTS),
-  payments: () => resolve(PAYMENTS),
-  enrollments: () => resolve(ENROLLMENTS),
-  exams: () => resolve(EXAMS),
-  exam: (id: string) => resolve(getExam(id)),
-  centres: () => resolve(EXAM_CENTRES),
-  centre: (id: string) => resolve(getCentre(id)),
-  candidates: (examId: string) => resolve(EXAM_CANDIDATES.filter((c) => c.examId === examId)),
-  credentials: (examId: string) => resolve(EXAM_CREDENTIALS.filter((c) => c.examId === examId)),
-  admitCards: (examId: string) => resolve(ADMIT_CARDS.filter((a) => a.examId === examId)),
-  answerKeys: () => resolve(ANSWER_KEYS),
-  responses: () => resolve(RESPONSE_UPLOADS),
-  results: () => resolve(COHORT_RESULTS),
-  reports: () => resolve(REPORTS),
-  notifications: () => resolve(ADMIN_NOTIFICATIONS),
+  // Dashboard & Analytics
+  stats: () => resolve(ADMIN_STATS, "/admin/dashboard"),
+  activity: () => resolve(ACTIVITY, "/admin/activity"),
 
-  /** Simulates the server-side validation pass on a credential workbook. */
+  // Students & Enrollments
+  students: () => resolve(STUDENTS, "/admin/students"),
+  payments: () => resolve(PAYMENTS, "/admin/payments"),
+  enrollments: () => resolve(ENROLLMENTS, "/admin/enrollments"),
+
+  // Exams & Centres
+  exams: () => resolve(EXAMS, "/admin/exams"),
+  exam: (id: string) => resolve(getExam(id), `/admin/exams/${id}`),
+  centres: () => resolve(EXAM_CENTRES, "/admin/exam-centres"),
+  centre: (id: string) => resolve(getCentre(id), `/admin/exam-centres/${id}`),
+
+  // Exam Management
+  candidates: (examId: string) =>
+    resolve(
+      EXAM_CANDIDATES.filter((c) => c.examId === examId),
+      `/admin/exams/${examId}/candidates`,
+    ),
+  credentials: (examId: string) =>
+    resolve(
+      EXAM_CREDENTIALS.filter((c) => c.examId === examId),
+      `/admin/exams/${examId}/credentials`,
+    ),
+  admitCards: (examId: string) =>
+    resolve(
+      ADMIT_CARDS.filter((a) => a.examId === examId),
+      `/admin/exams/${examId}/admit-cards`,
+    ),
+
+  // Results & Reports
+  answerKeys: () => resolve(ANSWER_KEYS, "/admin/answer-keys"),
+  responses: () => resolve(RESPONSE_UPLOADS, "/admin/responses"),
+  results: () => resolve(COHORT_RESULTS, "/admin/results"),
+  reports: () => resolve(REPORTS, "/admin/reports"),
+
+  // Notifications
+  notifications: () => resolve(ADMIN_NOTIFICATIONS, "/admin/notifications"),
+
+  /** Validate credential upload against backend rules */
   validateCredentialUpload: async (): Promise<UploadValidationResult> =>
-    resolve(CREDENTIAL_UPLOAD_RESULT, 900),
+    resolve(CREDENTIAL_UPLOAD_RESULT, "/admin/credentials/validate", { method: "POST" }, 900),
 };
 
 export const adminData = {
