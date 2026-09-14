@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" role="img" aria-label="Nirvona">
+  <title>Nirvona</title>
+  <defs>
+    <linearGradient id="nvNavy" x1="60" y1="80" x2="300" y2="440" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1a3480"/>
+      <stop offset="0.55" stop-color="#0e1d4a"/>
+      <stop offset="1" stop-color="#081231"/>
+    </linearGradient>
+    <linearGradient id="nvEmber" x1="150" y1="470" x2="470" y2="360" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0e1d4a"/>
+      <stop offset="0.38" stop-color="#c22e09"/>
+      <stop offset="0.72" stop-color="#f95c14"/>
+      <stop offset="1" stop-color="#ffb624"/>
+    </linearGradient>
+    <linearGradient id="nvFlame" x1="256" y1="28" x2="256" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffb624"/>
+      <stop offset="1" stop-color="#ea4108"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Monogram N -->
+  <path d="M62 452V96c0-8 9-13 16-8l232 196V96c0-6 5-11 11-11h34c6 0 11 5 11 11v268c0 8-9 13-16 8L118 176v276c0 6-5 11-11 11H73c-6 0-11-5-11-11Z" fill="url(#nvNavy)"/>
+
+  <!-- Ember growth arc -->
+  <path d="M120 470c92-8 168-38 226-92 30-28 52-60 68-96" stroke="url(#nvEmber)" stroke-width="30" stroke-linecap="round" fill="none"/>
+  <path d="M398 268l32 6-4 34" stroke="#ffb624" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Pixel dissolve -->
+  <g>
+    <rect x="404" y="126" width="26" height="26" rx="4" fill="#0e1d4a"/>
+    <rect x="444" y="160" width="20" height="20" rx="4" fill="#f95c14"/>
+    <rect x="398" y="176" width="16" height="16" rx="3" fill="#2563eb"/>
+    <rect x="436" y="112" width="14" height="14" rx="3" fill="#ffb624"/>
+    <rect x="466" y="200" width="12" height="12" rx="3" fill="#ea4108"/>
+    <rect x="424" y="206" width="10" height="10" rx="2" fill="#1a3480"/>
+  </g>
+
+  <!-- Flame accent -->
+  <path d="M256 30c14 20 22 34 22 47a22 22 0 0 1-44 0c0-13 8-27 22-47Z" fill="url(#nvFlame)"/>
+</svg>

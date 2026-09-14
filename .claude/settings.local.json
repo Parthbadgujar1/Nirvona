@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__visualize__read_me",
+      "mcp__visualize__show_widget",
+      "Bash(php --version)",
+      "Bash(echo \"Found: Monolog\\\\\\\\Handler\\\\\\\\StreamHandler \\(singular\\)\")",
+      "Bash(echo \"Monolog\\\\\\\\Handlers \\(plural\\) does NOT exist\")",
+      "Bash(php -r \"echo json_encode\\(json_decode\\(file_get_contents\\('composer.lock'\\)\\)->packages[array_search\\('slim/slim', array_column\\(json_decode\\(file_get_contents\\('composer.lock'\\)\\)->packages,'name'\\)\\)]->version ?? 'na'\\);\")",
+      "Bash(composer --version)",
+      "PowerShell(Get-Command composer -ErrorAction SilentlyContinue)",
+      "PowerShell(composer --version 2>&1)",
+      "PowerShell(php \"C:\\\\Users\\\\vishw\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-vishw-OneDrive-Desktop-Nirvona-Nirvona-claude-php-mvc-backend-setup-72fwlw\\\\ce029f54-029a-4338-85d8-0ed41b33dc8c\\\\scratchpad\\\\container_smoke_test.php\")",
+      "Bash(php -m)",
+      "Bash(where pg_ctl)",
+      "Bash(where psql *)",
+      "PowerShell(Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{N='UsedGB';E={[math]::Round\\($_.Used/1GB,2\\)}}, @{N='FreeGB';E={[math]::Round\\($_.Free/1GB,2\\)}})",
+      "PowerShell(Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{N='FreeGB';E={[math]::Round\\($_.Free/1GB,2\\)}})",
+      "Bash(php -l app/Services/ResultService.php)",
+      "Bash(php -l app/Controllers/ScoringController.php)",
+      "Bash(php -l app/Middleware/AdminMiddleware.php)",
+      "Bash(docker exec *)",
+      "Bash(php -r \"require 'vendor/autoload.php'; var_dump\\(class_exists\\('Symfony\\\\\\\\Component\\\\\\\\Dotenv\\\\\\\\Dotenv'\\)\\);\")",
+      "Bash(netstat -ano)",
+      "Bash(php -l public/index.php)",
+      "Bash(php -l app/Repositories/BaseRepository.php)",
+      "Bash(php -l \"C:\\\\Users\\\\vishw\\\\OneDrive\\\\Desktop\\\\Nirvona\\\\Nirvona-claude-php-mvc-backend-setup-72fwlw\\\\backend\\\\verify-setup.php\")",
+      "Bash(php -r \"json_decode\\(file_get_contents\\('.vscode/tasks.json'\\)\\); echo json_last_error\\(\\) === JSON_ERROR_NONE ? 'tasks.json OK' : 'tasks.json INVALID: ' . json_last_error_msg\\(\\); echo \\\\\"\\\\n\\\\\";\")",
+      "Bash(php -r \"json_decode\\(file_get_contents\\('.vscode/extensions.json'\\)\\); echo json_last_error\\(\\) === JSON_ERROR_NONE ? 'extensions.json OK' : 'extensions.json INVALID: ' . json_last_error_msg\\(\\); echo \\\\\"\\\\n\\\\\";\")",
+      "Bash(\"/c/Program Files/PostgreSQL/18/bin/psql.exe\" -U postgres -h localhost -d nirvona -c \"DELETE FROM students WHERE email = 'native.test@example.com';\")",
+      "Bash(python -c 'import sys,re *)",
+      "Bash(\"/c/Program Files/PostgreSQL/18/bin/psql.exe\" -U postgres -h localhost -d nirvona -c \"DELETE FROM students WHERE email LIKE 'me.route.test%';\")",
+      "Bash(> \"C:\\\\Users\\\\vishw\\\\OneDrive\\\\Desktop\\\\Nirvona\\\\Nirvona-claude-php-mvc-backend-setup-72fwlw\\\\backend\\\\storage\\\\logs\\\\app.log\")",
+      "Bash(npx tsc *)",
+      "Bash(php -r \"echo password_hash\\('demo1234', PASSWORD_DEFAULT\\);\")",
+      "Bash('/c/Program Files/PostgreSQL/18/bin/psql.exe' -U postgres -h localhost -d nirvona -c ' *)",
+      "Bash(php -l app/Services/AdminService.php)",
+      "Bash(Get-ChildItem -Force)",
+      "Bash(Select-Object Name, PSIsContainer)"
+    ]
+  }
+}

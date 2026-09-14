@@ -1,0 +1,54 @@
+# Environment / secrets - never commit real API keys or DB credentials
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# Dependencies
+node_modules/
+backend/vendor/
+
+# Next.js build output
+.next/
+out/
+build/
+dist/
+
+# TypeScript build info
+*.tsbuildinfo
+next-env.d.ts
+
+# Logs
+backend/storage/logs/*.log
+npm-debug.log*
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Test/coverage
+coverage/
+.phpunit.result.cache
+
+# Scratch files left over from manual verification during development
+backend/order_response.json
+
+# One-off session status/summary docs - not real project documentation
+# (keep README.md and backend/README.md only)
+/BACKEND_ARCHITECTURE.md
+/BACKEND_AUDIT_SUMMARY.md
+/DOCUMENTATION_INDEX.md
+/FRONTEND_README.md
+/INTEGRATION_GUIDE.md
+/LOCAL_SETUP_GUIDE.md
+/QUICK_REFERENCE.md
+/SETUP_COMPLETE.md
+/TROUBLESHOOTING.md
+backend/QUICKSTART.md
+backend/SETUP.md
+backend/TESTING_GUIDE.md
+backend/TEST_EXECUTION_SUMMARY.md

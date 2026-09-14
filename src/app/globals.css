@@ -1,0 +1,312 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+/* =====================================================================
+   NIRVONA EDUCATION TECH — Global Design System
+   Derived from the Nirvona logo: deep navy, royal blue, warm orange.
+   ===================================================================== */
+
+@theme {
+  /* ---------- Brand: Navy (primary / trust) ---------- */
+  --color-navy-50: #eef3fc;
+  --color-navy-100: #d8e3f8;
+  --color-navy-200: #b4c8f0;
+  --color-navy-300: #85a4e4;
+  --color-navy-400: #567cd4;
+  --color-navy-500: #3159bf;
+  --color-navy-600: #21429e;
+  --color-navy-700: #1a3480;
+  --color-navy-800: #142863;
+  --color-navy-900: #0e1d4a;
+  --color-navy-950: #081231;
+
+  /* ---------- Brand: Royal blue (secondary / interactive) ---------- */
+  --color-royal-50: #eff6ff;
+  --color-royal-100: #dbeafe;
+  --color-royal-200: #bfdbfe;
+  --color-royal-300: #93c5fd;
+  --color-royal-400: #60a5fa;
+  --color-royal-500: #3b82f6;
+  --color-royal-600: #2563eb;
+  --color-royal-700: #1d4ed8;
+  --color-royal-800: #1e40af;
+  --color-royal-900: #1e3a8a;
+
+  /* ---------- Brand: Ember (accent / CTA) ---------- */
+  --color-ember-50: #fff5ed;
+  --color-ember-100: #ffe8d4;
+  --color-ember-200: #ffcda8;
+  --color-ember-300: #ffa970;
+  --color-ember-400: #ff7a38;
+  --color-ember-500: #f95c14;
+  --color-ember-600: #ea4108;
+  --color-ember-700: #c22e09;
+  --color-ember-800: #9a2610;
+  --color-ember-900: #7c2210;
+
+  /* ---------- Brand: Saffron (warm highlight) ---------- */
+  --color-saffron-100: #fff3d4;
+  --color-saffron-200: #ffe4a3;
+  --color-saffron-300: #ffcf5c;
+  --color-saffron-400: #ffb624;
+  --color-saffron-500: #f59e0b;
+  --color-saffron-600: #d97706;
+
+  /* ---------- Neutral (warm-cool balanced slate) ---------- */
+  --color-ink-50: #f7f8fa;
+  --color-ink-100: #eef0f4;
+  --color-ink-200: #dfe3ea;
+  --color-ink-300: #c6ccd8;
+  --color-ink-400: #98a1b3;
+  --color-ink-500: #6b7488;
+  --color-ink-600: #4d5568;
+  --color-ink-700: #3a4154;
+  --color-ink-800: #262c3c;
+  --color-ink-900: #171b28;
+
+  /* ---------- Semantic ---------- */
+  --color-success-50: #ecfdf5;
+  --color-success-100: #d1fae5;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+  --color-danger-50: #fef2f2;
+  --color-danger-100: #fee2e2;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+  --color-info-50: #eff6ff;
+  --color-info-100: #dbeafe;
+  --color-info-500: #3b82f6;
+  --color-info-600: #2563eb;
+
+  /* ---------- Surfaces (4 visual levels) ---------- */
+  --color-canvas: #f6f7fb;      /* L1 page background */
+  --color-surface: #ffffff;     /* L2 cards / containers */
+  --color-elevated: #ffffff;    /* L3 interactive */
+  --color-hairline: #e6e9f0;
+
+  /* ---------- Typography ---------- */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-jakarta), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+
+  /* ---------- Radius ---------- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 28px;
+
+  /* ---------- Shadows (soft, layered, low-contrast) ---------- */
+  --shadow-xs: 0 1px 2px 0 rgb(14 29 74 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(14 29 74 / 0.07), 0 1px 2px -1px rgb(14 29 74 / 0.05);
+  --shadow-md: 0 4px 12px -2px rgb(14 29 74 / 0.08), 0 2px 4px -2px rgb(14 29 74 / 0.05);
+  --shadow-lg: 0 12px 28px -8px rgb(14 29 74 / 0.12), 0 4px 10px -4px rgb(14 29 74 / 0.06);
+  --shadow-xl: 0 24px 56px -16px rgb(14 29 74 / 0.18), 0 8px 20px -8px rgb(14 29 74 / 0.08);
+  --shadow-cta: 0 8px 20px -6px rgb(234 65 8 / 0.42);
+  --shadow-ring: 0 0 0 1px rgb(14 29 74 / 0.06);
+
+  /* ---------- Motion ---------- */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ---------- Breakpoint helper ---------- */
+  --breakpoint-3xl: 1728px;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-hairline);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink-800);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5 {
+    font-family: var(--font-display);
+    color: var(--color-navy-900);
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  p { text-wrap: pretty; }
+
+  /* Consistent, visible focus ring everywhere */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-royal-600);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  ::selection {
+    background-color: var(--color-navy-900);
+    color: #fff;
+  }
+
+  /* Numeric data should align in tables and stat cards */
+  .tabular { font-variant-numeric: tabular-nums; }
+}
+
+@layer components {
+  /* ---------- Brand gradients (used sparingly) ---------- */
+  .bg-brand-navy {
+    background-image: linear-gradient(135deg, #0e1d4a 0%, #142863 45%, #1a3480 100%);
+  }
+  .bg-brand-ember {
+    background-image: linear-gradient(100deg, #ea4108 0%, #f95c14 45%, #ffb624 100%);
+  }
+  .text-brand-ember {
+    background-image: linear-gradient(100deg, #ea4108 0%, #f95c14 40%, #ffb624 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .text-brand-navy {
+    background-image: linear-gradient(100deg, #0e1d4a 0%, #21429e 60%, #3b82f6 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* ---------- Layout primitives ---------- */
+  .container-nv {
+    width: 100%;
+    margin-inline: auto;
+    max-width: 1280px;
+    padding-inline: 1.25rem;
+  }
+  @media (min-width: 768px) {
+    .container-nv { padding-inline: 2rem; }
+  }
+
+  .section-pad { padding-block: 4.5rem; }
+  @media (min-width: 768px) {
+    .section-pad { padding-block: 6.5rem; }
+  }
+
+  /* ---------- Decorative backdrops ---------- */
+  .grid-backdrop {
+    background-image:
+      linear-gradient(to right, rgb(14 29 74 / 0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(14 29 74 / 0.045) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+  .grid-backdrop-dark {
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.055) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.055) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+  .dot-backdrop {
+    background-image: radial-gradient(rgb(14 29 74 / 0.10) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .mask-fade-b {
+    -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+  }
+  .mask-fade-x {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+    mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+  }
+
+  /* ---------- Scrollbars ---------- */
+  .nv-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink-300) transparent;
+  }
+  .nv-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
+  .nv-scroll::-webkit-scrollbar-track { background: transparent; }
+  .nv-scroll::-webkit-scrollbar-thumb {
+    background-color: var(--color-ink-300);
+    border-radius: 999px;
+  }
+  .nv-scroll::-webkit-scrollbar-thumb:hover { background-color: var(--color-ink-400); }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+@layer utilities {
+  .animate-accordion-down { animation: accordion-down 260ms var(--ease-out-quint); }
+  .animate-accordion-up { animation: accordion-up 220ms var(--ease-out-quint); }
+  .animate-marquee { animation: nv-marquee 38s linear infinite; }
+  .animate-shimmer { animation: nv-shimmer 1.6s ease-in-out infinite; }
+  .animate-float { animation: nv-float 7s ease-in-out infinite; }
+  .animate-pulse-ring { animation: nv-pulse-ring 2.4s ease-out infinite; }
+}
+
+@keyframes accordion-down {
+  from { height: 0; opacity: 0; }
+  to { height: var(--radix-accordion-content-height); opacity: 1; }
+}
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); opacity: 1; }
+  to { height: 0; opacity: 0; }
+}
+
+@keyframes nv-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes nv-shimmer {
+  0% { opacity: 0.55; }
+  50% { opacity: 1; }
+  100% { opacity: 0.55; }
+}
+@keyframes nv-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+@keyframes nv-pulse-ring {
+  0% { transform: scale(0.85); opacity: 0.7; }
+  70% { transform: scale(1.6); opacity: 0; }
+  100% { opacity: 0; }
+}
+
+@media print {
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  body { background: #fff; }
+  .print-sheet {
+    box-shadow: none !important;
+    border: 1px solid #d8dde8 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+  @page { margin: 12mm; size: A4; }
+}
+
+.print-only { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
