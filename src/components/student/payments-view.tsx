@@ -15,13 +15,13 @@ import { Receipt } from "@/components/shared/receipt";
 import { useAsync } from "@/hooks/use-async";
 import { studentService } from "@/services/student.service";
 import { useOrders } from "@/hooks/use-orders";
-import { CURRENT_STUDENT } from "@/data/students";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { exportRows, timestampedName } from "@/lib/export";
 import type { Payment } from "@/types";
 
 export function PaymentsView() {
   const payments = useAsync(() => studentService.payments(), []);
+  const student = useAsync(() => studentService.me(), []);
   const { orders, hydrated } = useOrders();
   const [receipt, setReceipt] = React.useState<Payment | null>(null);
 
@@ -180,9 +180,9 @@ export function PaymentsView() {
           <DialogHeader className="no-print">
             <DialogTitle>Receipt · {receipt?.id}</DialogTitle>
           </DialogHeader>
-          {receipt && (
+          {receipt && student.data && (
             <div className="px-6 pb-6">
-              <Receipt payment={receipt} student={CURRENT_STUDENT} className="border-0 shadow-none" />
+              <Receipt payment={receipt} student={student.data} className="border-0 shadow-none" />
               <div className="mt-4 flex flex-wrap justify-end gap-2 no-print">
                 <Button variant="secondary" size="sm" onClick={() => window.print()}>
                   <Printer />
