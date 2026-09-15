@@ -49,6 +49,20 @@ class PackageRepository extends BaseRepository
     }
 
     /**
+     * Get every package regardless of status - for admin management.
+     * getAllActive() is for the public catalogue only.
+     *
+     * @return array
+     */
+    public function getAllForAdmin(): array
+    {
+        $rows = $this->select(
+            "SELECT * FROM {$this->table} ORDER BY courseSlug ASC, durationMonths ASC"
+        );
+        return array_map([$this, 'decodeJsonColumns'], $rows);
+    }
+
+    /**
      * Get the recommended package for a course, if any
      *
      * @param string $courseSlug
@@ -83,6 +97,22 @@ class PackageRepository extends BaseRepository
     {
         $created = parent::create($this->encodeJsonColumns($data));
         return $this->decodeJsonColumns($created);
+    }
+
+    /**
+     * @param string $id
+     * @param array $data
+     * @return bool
+     */
+    public function update(string $id, array $data): bool
+    {
+        // BaseRepository::update() binds every value as-is - without this
+        // override, passing a PHP array for features/benefits/includes
+        // (as every other write path here does) hands PDO a raw array for
+        // a JSONB column instead of a JSON string, which PDO can't bind at
+        // all (create()/decodeJsonColumns() already handle this correctly;
+        // this was the one write path that didn't).
+        return parent::update($id, $this->encodeJsonColumns($data));
     }
 
     private function decodeJsonColumns(array $row): array

@@ -46,6 +46,19 @@ class CourseRepository extends BaseRepository
     }
 
     /**
+     * Get every course regardless of status - for admin management, where
+     * an inactive/draft course still needs to be visible to edit or
+     * reactivate. getActive() is for the public catalogue only.
+     *
+     * @return array
+     */
+    public function getAllForAdmin(): array
+    {
+        $rows = $this->select("SELECT * FROM {$this->table} ORDER BY name");
+        return array_map([$this, 'decodeJsonColumns'], $rows);
+    }
+
+    /**
      * Create a course
      *
      * @param array $data Must include 'slug'

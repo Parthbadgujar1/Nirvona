@@ -1,5 +1,7 @@
 import { EXAMS, EXAM_CENTRES, getCentre, getExam } from "@/data/exams";
 import { STUDENTS } from "@/data/students";
+import { COURSES } from "@/data/courses";
+import { PACKAGES } from "@/data/packages";
 import {
   COURSE_SPLIT,
   ENROLLMENTS,
@@ -26,7 +28,10 @@ import {
   COHORT_RESULTS,
   SCORE_DISTRIBUTION,
 } from "@/data/results";
-import type { AnswerKey, AnswerKeyEntry, AppNotification, Exam, ExamCentre, UploadValidationResult } from "@/types";
+import type {
+  AnswerKey, AnswerKeyEntry, AppNotification, Course, Exam, ExamCentre, Package,
+  UploadValidationResult,
+} from "@/types";
 import { resolve, post, put, del } from "./http";
 
 /**
@@ -59,6 +64,18 @@ export const adminService = {
   students: () => resolve(STUDENTS, "/admin/students"),
   payments: () => resolve(PAYMENTS, "/admin/payments"),
   enrollments: () => resolve(ENROLLMENTS, "/admin/enrollments"),
+
+  // Catalogue: Courses & Packages
+  courses: (): Promise<Course[]> => resolve(COURSES, "/admin/courses"),
+  createCourse: (payload: Record<string, unknown>): Promise<Course> => post("/admin/courses", payload),
+  updateCourse: (slug: string, payload: Record<string, unknown>): Promise<Course> =>
+    put(`/admin/courses/${slug}`, payload),
+  deleteCourse: (slug: string): Promise<void> => del(`/admin/courses/${slug}`),
+  packages: (): Promise<Package[]> => resolve(PACKAGES, "/admin/packages"),
+  createPackage: (payload: Record<string, unknown>): Promise<Package> => post("/admin/packages", payload),
+  updatePackage: (id: string, payload: Record<string, unknown>): Promise<Package> =>
+    put(`/admin/packages/${id}`, payload),
+  deletePackage: (id: string): Promise<void> => del(`/admin/packages/${id}`),
 
   // Exams & Centres
   exams: () => resolve(EXAMS, "/admin/exams"),

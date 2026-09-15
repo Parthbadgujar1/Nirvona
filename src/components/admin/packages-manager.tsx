@@ -2,26 +2,81 @@
 
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpRight, Boxes, Download, Sparkles, Tag, TrendingUp } from "lucide-react";
+import {
+  ArrowUpRight, Boxes, Download, MoreHorizontal, Pencil, Plus, Sparkles, Tag, Trash2, TrendingUp,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Field, Input, Textarea } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Dropdown, DropdownContent, DropdownItem, DropdownLabel, DropdownSeparator, DropdownTrigger,
+} from "@/components/ui/dropdown";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { FilterBar } from "@/components/shared/filters";
-import { EmptyState } from "@/components/shared/states";
-import { COURSES } from "@/data/courses";
-import { PACKAGES } from "@/data/packages";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { EmptyState, ErrorState, LoadingState } from "@/components/shared/states";
 import { PAYMENTS } from "@/data/payments";
+import { useAsync } from "@/hooks/use-async";
+import { adminService } from "@/services/admin.service";
 import { formatCurrency, formatNumber } from "@/lib/format";
 import { exportRows, timestampedName } from "@/lib/export";
 import type { Package } from "@/types";
 
+const EMPTY_DRAFT = {
+  courseSlug: "",
+  name: "",
+  duration: "3M" as Package["duration"],
+  durationLabel: "3 Months",
+  durationMonths: "3",
+  price: "2999",
+  originalPrice: "",
+  discountPercent: "",
+  tests: "6",
+  recommended: false,
+  tagline: "",
+  features: "",
+  benefits: "",
+  includes: {
+    examAccess: true,
+    analytics: true,
+    answerKey: true,
+    doubtSupport: false,
+    mentorship: false,
+    printedMaterial: false,
+  },
+};
+
+function linesToList(value: string): string[] {
+  return value.split("\n").map((line) => line.trim()).filter(Boolean);
+}
+
 export function PackagesManager() {
+  const packagesAsync = useAsync(() => adminService.packages(), []);
+  const courses = useAsync(() => adminService.courses(), []);
   const [search, setSearch] = React.useState("");
   const [filters, setFilters] = React.useState<Record<string, string>>({ course: "all", duration: "all" });
+  const [formOpen, setFormOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState<Package | null>(null);
+  const [draft, setDraft] = React.useState(EMPTY_DRAFT);
+  const [saving, setSaving] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<Package | null>(null);
+
+  if (packagesAsync.status === "error") return <ErrorState onRetry={packagesAsync.reload} />;
+  if (packagesAsync.status === "loading" || !packagesAsync.data) {
+    return <LoadingState label="Loading packages" />;
+  }
+
+  const PACKAGES = packagesAsync.data;
+  const COURSES = courses.data ?? [];
 
   const salesFor = (id: string) =>
     PAYMENTS.filter((p) => p.packageId === id && p.status === "successful").length;
@@ -32,6 +87,95 @@ export function PackagesManager() {
     if (search && !pkg.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
+
+  function openCreate() {
+    setEditing(null);
+    setDraft({ ...EMPTY_DRAFT, courseSlug: COURSES[0]?.slug ?? "" });
+    setFormOpen(true);
+  }
+
+  function openEdit(pkg: Package) {
+    setEditing(pkg);
+    setDraft({
+      courseSlug: pkg.courseSlug,
+      name: pkg.name,
+      duration: pkg.duration,
+      durationLabel: pkg.durationLabel,
+      durationMonths: String(pkg.durationMonths),
+      price: String(pkg.price),
+      originalPrice: pkg.originalPrice ? String(pkg.originalPrice) : "",
+      discountPercent: pkg.discountPercent ? String(pkg.discountPercent) : "",
+      tests: String(pkg.tests),
+      recommended: Boolean(pkg.recommended),
+      tagline: pkg.tagline ?? "",
+      features: (pkg.features ?? []).join("\n"),
+      benefits: (pkg.benefits ?? []).join("\n"),
+      includes: {
+        examAccess: pkg.includes?.examAccess ?? false,
+        analytics: pkg.includes?.analytics ?? false,
+        answerKey: pkg.includes?.answerKey ?? false,
+        doubtSupport: pkg.includes?.doubtSupport ?? false,
+        mentorship: pkg.includes?.mentorship ?? false,
+        printedMaterial: pkg.includes?.printedMaterial ?? false,
+      },
+    });
+    setFormOpen(true);
+  }
+
+  async function save(event: React.FormEvent) {
+    event.preventDefault();
+    if (!draft.courseSlug || !draft.name || !draft.durationMonths || !draft.price) {
+      toast.error("Course, name, duration and price are required");
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        courseSlug: draft.courseSlug,
+        name: draft.name,
+        duration: draft.duration,
+        durationLabel: draft.durationLabel || draft.duration,
+        durationMonths: Number(draft.durationMonths) || 0,
+        price: Number(draft.price) || 0,
+        originalPrice: draft.originalPrice ? Number(draft.originalPrice) : null,
+        discountPercent: draft.discountPercent ? Number(draft.discountPercent) : 0,
+        tests: Number(draft.tests) || 0,
+        recommended: draft.recommended,
+        tagline: draft.tagline || null,
+        features: linesToList(draft.features),
+        benefits: linesToList(draft.benefits),
+        includes: draft.includes,
+      };
+      if (editing) {
+        await adminService.updatePackage(editing.id, payload);
+      } else {
+        await adminService.createPackage(payload);
+      }
+      packagesAsync.reload();
+      setFormOpen(false);
+      setEditing(null);
+      toast.success(editing ? "Package updated" : "Package created", {
+        description: editing
+          ? "Changes are live on the packages page immediately."
+          : "The package is now available for students to purchase.",
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save this package.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    try {
+      await adminService.deletePackage(deleteTarget.id);
+      packagesAsync.reload();
+      toast.success(`${deleteTarget.name} deleted`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not delete this package.");
+    }
+  }
 
   const columns: Column<Package>[] = [
     {
@@ -124,12 +268,33 @@ export function PackagesManager() {
       align: "right",
       hideOnCard: true,
       cell: (row) => (
-        <Button asChild variant="secondary" size="xs">
-          <Link to={`/packages/${row.id}`}>
-            View
-            <ArrowUpRight />
-          </Link>
-        </Button>
+        <div className="flex items-center justify-end gap-2">
+          <Button asChild variant="secondary" size="xs">
+            <Link to={`/packages/${row.id}`}>
+              View
+              <ArrowUpRight />
+            </Link>
+          </Button>
+          <Dropdown>
+            <DropdownTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${row.name}`}>
+                <MoreHorizontal />
+              </Button>
+            </DropdownTrigger>
+            <DropdownContent>
+              <DropdownLabel>{row.name}</DropdownLabel>
+              <DropdownSeparator />
+              <DropdownItem onSelect={() => openEdit(row)}>
+                <Pencil />
+                Edit package
+              </DropdownItem>
+              <DropdownItem destructive onSelect={() => setDeleteTarget(row)}>
+                <Trash2 />
+                Delete package
+              </DropdownItem>
+            </DropdownContent>
+          </Dropdown>
+        </div>
       ),
     },
   ];
@@ -142,6 +307,11 @@ export function PackagesManager() {
         title="Packages"
         description="Pricing, duration and inclusions for every package across the five programs."
         actions={
+          <div className="flex flex-wrap gap-2">
+          <Button size="md" onClick={openCreate}>
+            <Plus />
+            Add package
+          </Button>
           <Button
             variant="secondary"
             size="md"
@@ -172,6 +342,7 @@ export function PackagesManager() {
             <Download />
             Export catalogue
           </Button>
+          </div>
         }
       />
 
@@ -271,6 +442,210 @@ export function PackagesManager() {
             ))}
         </ol>
       </Card>
+
+      <Dialog open={formOpen} onOpenChange={(open) => { setFormOpen(open); if (!open) setEditing(null); }}>
+        <DialogContent size="lg">
+          <DialogHeader>
+            <DialogTitle>{editing ? `Edit ${editing.name}` : "Add package"}</DialogTitle>
+            <DialogDescription>
+              {editing
+                ? "Changes apply immediately, including on the public packages page."
+                : "New packages appear on the public packages page once saved."}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={save}>
+            <DialogBody className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
+                <Field label="Package name" htmlFor="p-name" required>
+                  <Input
+                    id="p-name"
+                    value={draft.name}
+                    onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+                    placeholder="Class 11 Foundation — 6 Months"
+                  />
+                </Field>
+                <Field label="Course" htmlFor="p-course" required>
+                  <Select
+                    id="p-course"
+                    value={draft.courseSlug}
+                    onChange={(e) => setDraft((d) => ({ ...d, courseSlug: e.target.value }))}
+                  >
+                    {COURSES.map((c) => (
+                      <option key={c.slug} value={c.slug}>
+                        {c.shortName}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+
+              <Field label="Tagline" htmlFor="p-tagline">
+                <Input
+                  id="p-tagline"
+                  value={draft.tagline}
+                  onChange={(e) => setDraft((d) => ({ ...d, tagline: e.target.value }))}
+                  placeholder="A short one-line pitch shown on the package card"
+                />
+              </Field>
+
+              <div className="grid gap-4 sm:grid-cols-4">
+                <Field label="Duration" htmlFor="p-duration" required>
+                  <Select
+                    id="p-duration"
+                    value={draft.duration}
+                    onChange={(e) =>
+                      setDraft((d) => ({ ...d, duration: e.target.value as Package["duration"] }))
+                    }
+                  >
+                    <option value="3M">3 Months</option>
+                    <option value="6M">6 Months</option>
+                    <option value="1Y">1 Year</option>
+                    <option value="2Y">2 Years</option>
+                  </Select>
+                </Field>
+                <Field label="Duration label" htmlFor="p-durationLabel">
+                  <Input
+                    id="p-durationLabel"
+                    value={draft.durationLabel}
+                    onChange={(e) => setDraft((d) => ({ ...d, durationLabel: e.target.value }))}
+                    placeholder="6 Months"
+                  />
+                </Field>
+                <Field label="Months" htmlFor="p-months" required>
+                  <Input
+                    id="p-months"
+                    type="number"
+                    value={draft.durationMonths}
+                    onChange={(e) => setDraft((d) => ({ ...d, durationMonths: e.target.value }))}
+                  />
+                </Field>
+                <Field label="Tests" htmlFor="p-tests">
+                  <Input
+                    id="p-tests"
+                    type="number"
+                    value={draft.tests}
+                    onChange={(e) => setDraft((d) => ({ ...d, tests: e.target.value }))}
+                  />
+                </Field>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Field label="Price (₹)" htmlFor="p-price" required>
+                  <Input
+                    id="p-price"
+                    type="number"
+                    value={draft.price}
+                    onChange={(e) => setDraft((d) => ({ ...d, price: e.target.value }))}
+                  />
+                </Field>
+                <Field label="Original price (₹)" htmlFor="p-originalPrice" hint="Shown struck through">
+                  <Input
+                    id="p-originalPrice"
+                    type="number"
+                    value={draft.originalPrice}
+                    onChange={(e) => setDraft((d) => ({ ...d, originalPrice: e.target.value }))}
+                  />
+                </Field>
+                <Field label="Discount %" htmlFor="p-discount">
+                  <Input
+                    id="p-discount"
+                    type="number"
+                    value={draft.discountPercent}
+                    onChange={(e) => setDraft((d) => ({ ...d, discountPercent: e.target.value }))}
+                  />
+                </Field>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Features" htmlFor="p-features" hint="One per line">
+                  <Textarea
+                    id="p-features"
+                    rows={4}
+                    value={draft.features}
+                    onChange={(e) => setDraft((d) => ({ ...d, features: e.target.value }))}
+                    placeholder={"6 CBT examinations\nFull performance analytics"}
+                  />
+                </Field>
+                <Field label="Benefits" htmlFor="p-benefits" hint="One per line">
+                  <Textarea
+                    id="p-benefits"
+                    rows={4}
+                    value={draft.benefits}
+                    onChange={(e) => setDraft((d) => ({ ...d, benefits: e.target.value }))}
+                    placeholder={"Experience the real CBT interface\nBaseline diagnostic of standing"}
+                  />
+                </Field>
+              </div>
+
+              <Field label="Includes">
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  {(
+                    [
+                      ["examAccess", "Exam access"],
+                      ["analytics", "Performance analytics"],
+                      ["answerKey", "Answer key"],
+                      ["doubtSupport", "Doubt support"],
+                      ["mentorship", "Mentorship"],
+                      ["printedMaterial", "Printed material"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <label key={key} className="flex items-center gap-2 text-sm text-ink-700">
+                      <Checkbox
+                        checked={draft.includes[key]}
+                        onCheckedChange={(checked) =>
+                          setDraft((d) => ({
+                            ...d,
+                            includes: { ...d.includes, [key]: checked === true },
+                          }))
+                        }
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </Field>
+
+              <label className="flex items-center gap-2 text-sm text-ink-700">
+                <Checkbox
+                  checked={draft.recommended}
+                  onCheckedChange={(checked) =>
+                    setDraft((d) => ({ ...d, recommended: checked === true }))
+                  }
+                />
+                Mark as recommended for this course
+              </label>
+            </DialogBody>
+            <DialogFooter>
+              <Button type="button" variant="secondary" onClick={() => setFormOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={saving}>
+                {editing ? "Save changes" : "Add package"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title={`Delete ${deleteTarget?.name}?`}
+        description="This removes the package permanently and it disappears from the public packages page immediately. Students who already purchased it keep their access."
+        confirmLabel="Delete package"
+        tone="danger"
+        details={
+          deleteTarget && (
+            <div className="rounded-xl border border-ink-200 bg-canvas p-4 text-sm">
+              <p className="font-semibold text-navy-900">{deleteTarget.name}</p>
+              <p className="mt-1 text-ink-500">
+                {deleteTarget.durationLabel} · {formatCurrency(deleteTarget.price)}
+              </p>
+            </div>
+          )
+        }
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

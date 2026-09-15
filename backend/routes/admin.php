@@ -3,6 +3,8 @@
 use Slim\App;
 use Nirvona\Controllers\{
     AdminController,
+    CourseController,
+    PackageController,
     ExamCentreController,
     ExamCandidateController,
     AdmitCardController,
@@ -41,6 +43,18 @@ return function (App $app) {
         $group->get('/notifications', [NotificationController::class, 'listForAdmin']);
         $group->post('/notifications', [NotificationController::class, 'create']);
         $group->post('/notifications/{id}/retry', [NotificationController::class, 'retry']);
+
+        // Catalogue Management: Courses
+        $group->get('/courses', [CourseController::class, 'listForAdmin']);
+        $group->post('/courses', [CourseController::class, 'create']);
+        $group->put('/courses/{slug}', [CourseController::class, 'update']);
+        $group->delete('/courses/{slug}', [CourseController::class, 'delete']);
+
+        // Catalogue Management: Packages
+        $group->get('/packages', [PackageController::class, 'listForAdmin']);
+        $group->post('/packages', [PackageController::class, 'create']);
+        $group->put('/packages/{id}', [PackageController::class, 'update']);
+        $group->delete('/packages/{id}', [PackageController::class, 'delete']);
 
         // Student Management
         $group->get('/students', [AdminController::class, 'listStudents']);

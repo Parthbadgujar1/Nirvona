@@ -40,4 +40,49 @@ class PackageController
         $response->getBody()->write(json_encode($result));
         return $response->withHeader('Content-Type', 'application/json');
     }
+
+    /**
+     * GET /api/admin/packages
+     */
+    public function listForAdmin(Request $request, Response $response): Response
+    {
+        $result = $this->packageService->listAllForAdmin();
+        $response->getBody()->write(json_encode($result));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
+     * POST /api/admin/packages
+     */
+    public function create(Request $request, Response $response): Response
+    {
+        $data = json_decode($request->getBody(), true) ?? [];
+        $result = $this->packageService->create($data);
+        $statusCode = $result['success'] ? 201 : 400;
+        $response->getBody()->write(json_encode($result));
+        return $response->withStatus($statusCode)->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
+     * PUT /api/admin/packages/{id}
+     */
+    public function update(Request $request, Response $response, array $args): Response
+    {
+        $data = json_decode($request->getBody(), true) ?? [];
+        $result = $this->packageService->update($args['id'], $data);
+        $statusCode = $result['success'] ? 200 : 400;
+        $response->getBody()->write(json_encode($result));
+        return $response->withStatus($statusCode)->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
+     * DELETE /api/admin/packages/{id}
+     */
+    public function delete(Request $request, Response $response, array $args): Response
+    {
+        $result = $this->packageService->delete($args['id']);
+        $statusCode = $result['success'] ? 200 : 400;
+        $response->getBody()->write(json_encode($result));
+        return $response->withStatus($statusCode)->withHeader('Content-Type', 'application/json');
+    }
 }

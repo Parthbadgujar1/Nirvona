@@ -51,4 +51,49 @@ class CourseController
         $response->getBody()->write(json_encode($result));
         return $response->withHeader('Content-Type', 'application/json');
     }
+
+    /**
+     * GET /api/admin/courses
+     */
+    public function listForAdmin(Request $request, Response $response): Response
+    {
+        $result = $this->courseService->listAllForAdmin();
+        $response->getBody()->write(json_encode($result));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
+     * POST /api/admin/courses
+     */
+    public function create(Request $request, Response $response): Response
+    {
+        $data = json_decode($request->getBody(), true) ?? [];
+        $result = $this->courseService->create($data);
+        $statusCode = $result['success'] ? 201 : 400;
+        $response->getBody()->write(json_encode($result));
+        return $response->withStatus($statusCode)->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
+     * PUT /api/admin/courses/{slug}
+     */
+    public function update(Request $request, Response $response, array $args): Response
+    {
+        $data = json_decode($request->getBody(), true) ?? [];
+        $result = $this->courseService->update($args['slug'], $data);
+        $statusCode = $result['success'] ? 200 : 400;
+        $response->getBody()->write(json_encode($result));
+        return $response->withStatus($statusCode)->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
+     * DELETE /api/admin/courses/{slug}
+     */
+    public function delete(Request $request, Response $response, array $args): Response
+    {
+        $result = $this->courseService->delete($args['slug']);
+        $statusCode = $result['success'] ? 200 : 400;
+        $response->getBody()->write(json_encode($result));
+        return $response->withStatus($statusCode)->withHeader('Content-Type', 'application/json');
+    }
 }
