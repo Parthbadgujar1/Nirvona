@@ -55,6 +55,17 @@ class NotificationController
     }
 
     /**
+     * DELETE /api/admin/notifications/{id}
+     */
+    public function delete(Request $request, Response $response, array $args): Response
+    {
+        $result = $this->notificationService->delete($args['id']);
+        $statusCode = $result['success'] ? 200 : 400;
+        $response->getBody()->write(json_encode($result));
+        return $response->withStatus($statusCode)->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
      * GET /api/students/me/notifications
      */
     public function listForStudent(Request $request, Response $response, array $args): Response

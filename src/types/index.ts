@@ -199,8 +199,8 @@ export interface ExamCandidate {
 
 /* --------------------------- Admit + Credentials --------------------- */
 
-export type AdmitCardStatus = "pending" | "generated" | "published" | "sent";
-export type CredentialStatus = "pending" | "assigned" | "invalid" | "duplicate";
+export type AdmitCardStatus = "pending" | "generated" | "published" | "sent" | "revoked";
+export type CredentialStatus = "pending" | "assigned" | "invalid" | "duplicate" | "revoked";
 
 export interface AdmitCard {
   id: ID;
@@ -218,6 +218,9 @@ export interface AdmitCard {
 
 /** Exam-hall CBT login — deliberately separate from portal credentials. */
 export interface ExamCredential {
+  /** Only present on rows the backend actually issued (the mock
+   * dataset predates this field and doesn't carry one). */
+  id?: ID;
   studentId: ID;
   studentName: string;
   examId: ID;

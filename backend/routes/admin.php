@@ -43,6 +43,7 @@ return function (App $app) {
         $group->get('/notifications', [NotificationController::class, 'listForAdmin']);
         $group->post('/notifications', [NotificationController::class, 'create']);
         $group->post('/notifications/{id}/retry', [NotificationController::class, 'retry']);
+        $group->delete('/notifications/{id}', [NotificationController::class, 'delete']);
 
         // Catalogue Management: Courses
         $group->get('/courses', [CourseController::class, 'listForAdmin']);
@@ -94,10 +95,12 @@ return function (App $app) {
         $group->post('/exams/{examId}/admit-cards/generate-all', [AdmitCardController::class, 'generateAll']);
         $group->post('/exams/{examId}/admit-cards/publish-all', [AdmitCardController::class, 'publishAll']);
         $group->post('/admit-cards/{id}/publish', [AdmitCardController::class, 'publish']);
+        $group->post('/admit-cards/{id}/revoke', [AdmitCardController::class, 'revoke']);
 
         // Exam-day Operations: Credentials
         $group->get('/exams/{examId}/credentials', [ExamCredentialController::class, 'listByExam']);
         $group->post('/exams/{examId}/credentials', [ExamCredentialController::class, 'assign']);
+        $group->post('/credentials/{id}/revoke', [ExamCredentialController::class, 'revoke']);
 
         // Answer Keys
         $group->get('/answer-keys', [AnswerKeyController::class, 'listAll']);

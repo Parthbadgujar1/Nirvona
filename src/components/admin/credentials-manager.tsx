@@ -3,8 +3,8 @@
 import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  AlertTriangle, CheckCircle2, Copy, Download, FileSpreadsheet, Info, KeyRound, RotateCcw,
-  ShieldCheck, Upload, XCircle,
+  AlertTriangle, CheckCircle2, Copy, Download, FileSpreadsheet, Info, KeyRound, MoreHorizontal,
+  RotateCcw, ShieldCheck, Upload, XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Select } from "@/components/ui/select";
+import {
+  Dropdown, DropdownContent, DropdownItem, DropdownLabel, DropdownSeparator, DropdownTrigger,
+} from "@/components/ui/dropdown";
 import { ProgressBar, Steps } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/shared/page-header";
@@ -38,9 +41,18 @@ const UPLOAD_STEPS = [
 
 export function CredentialsManager() {
   const exams = useAsync(() => adminService.exams(), []);
-  const credentials = useAsync(() => adminService.credentials("CBT-04"), []);
+  // Was a hard-coded "CBT-04" that never matched any real exam id and
+  // never refetched when the exam Select changed - the credentials
+  // table just silently showed nothing (or whatever "CBT-04" resolved
+  // to, if anything) regardless of which exam was picked. Empty until
+  // real exams load, then defaults to the first one; refetches whenever
+  // examId changes.
+  const [examId, setExamId] = React.useState("");
+  const credentials = useAsync(
+    () => (examId ? adminService.credentials(examId) : Promise.resolve([])),
+    [examId],
+  );
 
-  const [examId, setExamId] = React.useState("CBT-04");
   const [file, setFile] = React.useState<UploadedFile | null>(null);
   const [uploading, setUploading] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
@@ -51,6 +63,13 @@ export function CredentialsManager() {
   const [search, setSearch] = React.useState("");
   const [filters, setFilters] = React.useState<Record<string, string>>({ status: "all" });
   const [revealAll, setRevealAll] = React.useState(false);
+  const [revokeTarget, setRevokeTarget] = React.useState<ExamCredential | null>(null);
+
+  React.useEffect(() => {
+    if (!examId && exams.data && exams.data.length > 0) {
+      setExamId(exams.data[0].id);
+    }
+  }, [examId, exams.data]);
 
   if (exams.status === "error") return <ErrorState onRetry={exams.reload} />;
   if (exams.status === "loading" || !exams.data) return <LoadingState label="Loading examinations" />;
@@ -181,7 +200,44 @@ export function CredentialsManager() {
         </span>
       ),
     },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      hideOnCard: true,
+      cell: (row) =>
+        row.status === "revoked" ? (
+          <span className="text-xs text-ink-300">—</span>
+        ) : (
+          <Dropdown>
+            <DropdownTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${row.studentName}`}>
+                <MoreHorizontal />
+              </Button>
+            </DropdownTrigger>
+            <DropdownContent>
+              <DropdownLabel>{row.studentName}</DropdownLabel>
+              <DropdownSeparator />
+              <DropdownItem destructive onSelect={() => setRevokeTarget(row)}>
+                <XCircle />
+                Revoke credential
+              </DropdownItem>
+            </DropdownContent>
+          </Dropdown>
+        ),
+    },
   ];
+
+  async function confirmRevoke() {
+    if (!revokeTarget?.id) return;
+    try {
+      await adminService.revokeCredential(revokeTarget.id);
+      credentials.reload();
+      toast.success(`Credential revoked for ${revokeTarget.studentName}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not revoke this credential.");
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -459,7 +515,7 @@ export function CredentialsManager() {
                 {
                   id: "status",
                   label: "Status",
-                  options: ["assigned", "pending", "invalid", "duplicate"].map((s) => ({
+                  options: ["assigned", "pending", "invalid", "duplicate", "revoked"].map((s) => ({
                     label: s,
                     value: s,
                   })),
@@ -606,6 +662,16 @@ export function CredentialsManager() {
             </div>
           )
         }
+      />
+
+      <ConfirmDialog
+        open={Boolean(revokeTarget)}
+        onOpenChange={(open) => !open && setRevokeTarget(null)}
+        title={`Revoke ${revokeTarget?.studentName}'s credential?`}
+        description="They will no longer be able to log in at the exam hall with this login ID. A new credential can be issued to them afterward."
+        confirmLabel="Revoke credential"
+        tone="danger"
+        onConfirm={confirmRevoke}
       />
     </div>
   );

@@ -219,6 +219,35 @@ class NotificationService extends BaseService
     }
 
     /**
+     * Delete a notification. notification_recipients.notificationId is
+     * ON DELETE CASCADE (025_create_notification_recipients_table), so
+     * this also removes it from every recipient's in-app feed - unlike
+     * the course/package/student cases, there's no financial or audit
+     * reason to keep it around, so a plain delete (no soft-delete guard)
+     * is correct here.
+     *
+     * @param string $id
+     * @return array
+     */
+    public function delete(string $id): array
+    {
+        return $this->executeWithFallback(
+            function () use ($id) {
+                if (!$this->notificationRepository->getById($id)) {
+                    throw new ServiceException("Notification not found: {$id}", 'NotificationService', false);
+                }
+
+                $this->notificationRepository->delete($id);
+                $this->auditLog('DELETE', 'Notification', $id, []);
+
+                return ['success' => true, 'message' => 'Notification deleted successfully'];
+            },
+            null,
+            'deleteNotification'
+        );
+    }
+
+    /**
      * Send exam notification
      *
      * @param array $notificationData

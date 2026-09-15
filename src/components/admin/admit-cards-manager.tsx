@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, Download, Eye, IdCard, Printer, Send, Sparkles } from "lucide-react";
+import { CheckCircle2, Download, Eye, IdCard, Printer, Send, Sparkles, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -61,6 +61,7 @@ export function AdmitCardsManager() {
   const [selected, setSelected] = React.useState<string[]>([]);
   const [bulk, setBulk] = React.useState<BulkAction | null>(null);
   const [preview, setPreview] = React.useState<AdmitCard | null>(null);
+  const [revokeTarget, setRevokeTarget] = React.useState<AdmitCard | null>(null);
 
   React.useEffect(() => {
     if (!examId && exams.data && exams.data.length > 0) {
@@ -152,21 +153,40 @@ export function AdmitCardsManager() {
     },
     {
       key: "actions",
-      header: "Preview",
+      header: "",
       align: "right",
+      hideOnCard: true,
       cell: (row) => (
-        <Button
-          variant="secondary"
-          size="xs"
-          onClick={() => setPreview(row)}
-          disabled={row.status === "pending"}
-        >
-          <Eye />
-          Preview
-        </Button>
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="secondary"
+            size="xs"
+            onClick={() => setPreview(row)}
+            disabled={row.status === "pending"}
+          >
+            <Eye />
+            Preview
+          </Button>
+          {row.status !== "pending" && row.status !== "revoked" && (
+            <Button variant="ghost" size="icon-sm" aria-label={`Revoke ${row.studentName}'s admit card`} onClick={() => setRevokeTarget(row)}>
+              <XCircle />
+            </Button>
+          )}
+        </div>
       ),
     },
   ];
+
+  async function confirmRevoke() {
+    if (!revokeTarget) return;
+    try {
+      await adminService.revokeAdmitCard(revokeTarget.id);
+      admitCards.reload();
+      toast.success(`Admit card revoked for ${revokeTarget.studentName ?? revokeTarget.studentId}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not revoke this admit card.");
+    }
+  }
 
   async function applyBulk(action: BulkAction) {
     if (!exam) return;
@@ -314,7 +334,7 @@ export function AdmitCardsManager() {
           {
             id: "status",
             label: "Status",
-            options: ["pending", "generated", "published", "sent"].map((s) => ({ label: s, value: s })),
+            options: ["pending", "generated", "published", "sent", "revoked"].map((s) => ({ label: s, value: s })),
           },
         ]}
       >
@@ -426,6 +446,28 @@ export function AdmitCardsManager() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(revokeTarget)}
+        onOpenChange={(open) => !open && setRevokeTarget(null)}
+        title={`Revoke this admit card?`}
+        description="The candidate loses access to this admit card in their portal. Regenerate it afterward if needed."
+        confirmLabel="Revoke admit card"
+        tone="danger"
+        details={
+          revokeTarget && (
+            <div className="rounded-xl border border-ink-200 bg-canvas p-4 text-sm">
+              <p className="font-semibold text-navy-900">
+                {revokeTarget.studentName ?? revokeTarget.studentId}
+              </p>
+              <p className="mt-1 text-ink-500">
+                Roll {revokeTarget.rollNumber} · Seat {revokeTarget.seatNo}
+              </p>
+            </div>
+          )
+        }
+        onConfirm={confirmRevoke}
+      />
     </div>
   );
 }

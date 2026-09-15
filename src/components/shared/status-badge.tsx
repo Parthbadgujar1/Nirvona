@@ -32,6 +32,7 @@ const ADMIT: Record<AdmitCardStatus, Config> = {
   generated: { label: "Generated", tone: "royal", Icon: FileCheck2 },
   published: { label: "Published", tone: "success", Icon: CheckCircle2 },
   sent: { label: "Sent", tone: "navy", Icon: Send },
+  revoked: { label: "Revoked", tone: "danger", Icon: XCircle },
 };
 
 const CREDENTIAL: Record<CredentialStatus, Config> = {
@@ -39,6 +40,7 @@ const CREDENTIAL: Record<CredentialStatus, Config> = {
   assigned: { label: "Assigned", tone: "success", Icon: CheckCircle2 },
   invalid: { label: "Invalid", tone: "danger", Icon: AlertTriangle },
   duplicate: { label: "Duplicate", tone: "ember", Icon: Copy },
+  revoked: { label: "Revoked", tone: "danger", Icon: XCircle },
 };
 
 const DELIVERY: Record<DeliveryStatus, Config> = {

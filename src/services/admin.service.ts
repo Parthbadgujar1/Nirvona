@@ -153,10 +153,15 @@ export const adminService = {
     examId: string;
   }): Promise<AppNotification[]> => post("/admin/notifications", payload),
   retryNotification: (id: string) => post(`/admin/notifications/${id}/retry`, {}),
+  deleteNotification: (id: string): Promise<void> => del(`/admin/notifications/${id}`),
 
   /** Validate credential upload against backend rules */
   validateCredentialUpload: async (): Promise<UploadValidationResult> =>
     resolve(CREDENTIAL_UPLOAD_RESULT, "/admin/credentials/validate", { method: "POST" }, 900),
+
+  /** Exam-hall credential/admit-card revocation */
+  revokeCredential: (id: string): Promise<void> => post(`/admin/credentials/${id}/revoke`, {}),
+  revokeAdmitCard: (id: string): Promise<void> => post(`/admin/admit-cards/${id}/revoke`, {}),
 };
 
 export const adminData = {

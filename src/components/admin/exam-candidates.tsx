@@ -23,7 +23,10 @@ import type { ExamCandidate } from "@/types";
 
 export function ExamCandidates({ examId }: { examId: string }) {
   const exam = useAsync(() => adminService.exam(examId), [examId]);
-  const candidates = useAsync(() => adminService.candidates("CBT-04"), []);
+  // Was a hard-coded "CBT-04" that ignored the `examId` prop entirely -
+  // every exam's candidate roster page showed CBT-04's candidates (or
+  // none), regardless of which exam was actually open.
+  const candidates = useAsync(() => adminService.candidates(examId), [examId]);
   const [search, setSearch] = React.useState("");
   const [filters, setFilters] = React.useState<Record<string, string>>({
     admit: "all",

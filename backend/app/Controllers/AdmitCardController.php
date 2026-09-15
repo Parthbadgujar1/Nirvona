@@ -93,6 +93,17 @@ class AdmitCardController
     }
 
     /**
+     * POST /api/admin/admit-cards/{id}/revoke
+     */
+    public function revoke(Request $request, Response $response, array $args): Response
+    {
+        $result = $this->admitCardService->revoke($args['id']);
+        $statusCode = $result['success'] ? 200 : 400;
+        $response->getBody()->write(json_encode($result));
+        return $response->withStatus($statusCode)->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
      * POST /api/admin/exams/{examId}/admit-cards/generate-all
      *
      * Bulk-generates an admit card for every candidate registered for

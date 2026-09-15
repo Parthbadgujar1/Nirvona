@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Bell, CheckCircle2, Mail, MessageSquare, Plus, RefreshCcw, Send, XCircle } from "lucide-react";
+import {
+  Bell, CheckCircle2, Mail, MessageSquare, MoreHorizontal, Plus, RefreshCcw, Send, Trash2, XCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -13,11 +15,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Dropdown, DropdownContent, DropdownItem, DropdownLabel, DropdownSeparator, DropdownTrigger,
+} from "@/components/ui/dropdown";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { FilterBar } from "@/components/shared/filters";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/states";
 import { useAsync } from "@/hooks/use-async";
 import { adminService } from "@/services/admin.service";
@@ -58,6 +64,7 @@ export function NotificationsManager() {
   const [audience, setAudience] = React.useState("");
   const [selectedChannels, setSelectedChannels] = React.useState<NotificationChannel[]>(["whatsapp", "email", "portal"]);
   const [sending, setSending] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<AppNotification | null>(null);
 
   React.useEffect(() => {
     if (!audience && exams.data && exams.data.length > 0) {
@@ -138,33 +145,61 @@ export function NotificationsManager() {
       key: "actions",
       header: "",
       align: "right",
-      cell: (row) =>
-        row.status === "failed" ? (
-          <Button
-            variant="secondary"
-            size="xs"
-            onClick={async () => {
-              try {
-                await adminService.retryNotification(row.id);
-                setRows((prev) =>
-                  prev.map((r) => (r.id === row.id ? { ...r, status: "sent" as const } : r)),
-                );
-                toast.success("Notification requeued", {
-                  description: `Retrying delivery to ${formatNumber(row.recipients)} recipients.`,
-                });
-              } catch (error) {
-                toast.error(error instanceof Error ? error.message : "Unable to retry notification.");
-              }
-            }}
-          >
-            <RefreshCcw />
-            Retry
-          </Button>
-        ) : (
-          <span className="text-xs text-ink-300">—</span>
-        ),
+      hideOnCard: true,
+      cell: (row) => (
+        <div className="flex items-center justify-end gap-2">
+          {row.status === "failed" && (
+            <Button
+              variant="secondary"
+              size="xs"
+              onClick={async () => {
+                try {
+                  await adminService.retryNotification(row.id);
+                  setRows((prev) =>
+                    prev.map((r) => (r.id === row.id ? { ...r, status: "sent" as const } : r)),
+                  );
+                  toast.success("Notification requeued", {
+                    description: `Retrying delivery to ${formatNumber(row.recipients)} recipients.`,
+                  });
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : "Unable to retry notification.");
+                }
+              }}
+            >
+              <RefreshCcw />
+              Retry
+            </Button>
+          )}
+          <Dropdown>
+            <DropdownTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${row.title}`}>
+                <MoreHorizontal />
+              </Button>
+            </DropdownTrigger>
+            <DropdownContent>
+              <DropdownLabel>{row.title}</DropdownLabel>
+              <DropdownSeparator />
+              <DropdownItem destructive onSelect={() => setDeleteTarget(row)}>
+                <Trash2 />
+                Delete notification
+              </DropdownItem>
+            </DropdownContent>
+          </Dropdown>
+        </div>
+      ),
     },
   ];
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    try {
+      await adminService.deleteNotification(deleteTarget.id);
+      setRows((prev) => prev.filter((r) => r.id !== deleteTarget.id));
+      toast.success("Notification deleted");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not delete this notification.");
+    }
+  }
 
   async function send() {
     if (selectedChannels.length === 0) {
@@ -374,6 +409,16 @@ export function NotificationsManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title={`Delete "${deleteTarget?.title}"?`}
+        description="This removes the notification from the admin log and from every recipient's portal feed. This can't be undone."
+        confirmLabel="Delete notification"
+        tone="danger"
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

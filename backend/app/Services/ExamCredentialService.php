@@ -86,7 +86,13 @@ class ExamCredentialService extends BaseService
                     );
                 }
 
-                if ($this->examCredentialRepository->findByStudentAndExam($data['studentId'], $data['examId'])) {
+                // UNIQUE(studentId, examId) means a revoked credential still
+                // occupies the row - only a genuinely still-active one should
+                // block a new assignment. A revoked one gets reissued below
+                // instead of inserted as a second row (which the constraint
+                // would reject anyway).
+                $existing = $this->examCredentialRepository->findByStudentAndExam($data['studentId'], $data['examId']);
+                if ($existing && $existing['status'] !== 'revoked') {
                     throw new ServiceException(
                         "Credential already assigned for this student/exam",
                         'ExamCredentialService',
@@ -97,14 +103,24 @@ class ExamCredentialService extends BaseService
                 $loginId = $data['loginId'] ?? ('CBT' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 6)));
                 $plainPassword = $data['password'] ?? bin2hex(random_bytes(4));
 
-                $credential = $this->examCredentialRepository->createWithPassword([
-                    'studentId' => $data['studentId'],
-                    'examId' => $data['examId'],
-                    'studentName' => $data['studentName'] ?? null,
-                    'loginId' => $loginId,
-                    'status' => 'assigned',
-                    'assignedAt' => date('Y-m-d H:i:s'),
-                ], $plainPassword);
+                if ($existing) {
+                    $this->examCredentialRepository->update($existing['id'], [
+                        'loginId' => $loginId,
+                        'passwordHash' => password_hash($plainPassword, PASSWORD_DEFAULT),
+                        'status' => 'assigned',
+                        'assignedAt' => date('Y-m-d H:i:s'),
+                    ]);
+                    $credential = $this->examCredentialRepository->getById($existing['id']);
+                } else {
+                    $credential = $this->examCredentialRepository->createWithPassword([
+                        'studentId' => $data['studentId'],
+                        'examId' => $data['examId'],
+                        'studentName' => $data['studentName'] ?? null,
+                        'loginId' => $loginId,
+                        'status' => 'assigned',
+                        'assignedAt' => date('Y-m-d H:i:s'),
+                    ], $plainPassword);
+                }
 
                 $this->auditLog('ASSIGN', 'ExamCredential', $credential['id'], [
                     'studentId' => $data['studentId'],
@@ -122,6 +138,35 @@ class ExamCredentialService extends BaseService
             },
             null,
             'assignCredential'
+        );
+    }
+
+    /**
+     * Revoke a student's exam-hall credential
+     *
+     * Sets status='revoked' rather than deleting - deleting would free
+     * the UNIQUE(studentId, examId) slot in a way that's indistinguishable
+     * from "never assigned", losing the fact that one was issued and then
+     * pulled. assign() already treats a revoked row as reissuable.
+     *
+     * @param string $id
+     * @return array
+     */
+    public function revoke(string $id): array
+    {
+        return $this->executeWithFallback(
+            function () use ($id) {
+                if (!$this->examCredentialRepository->getById($id)) {
+                    throw new ServiceException("Credential not found: {$id}", 'ExamCredentialService', false);
+                }
+
+                $this->examCredentialRepository->update($id, ['status' => 'revoked']);
+                $this->auditLog('REVOKE', 'ExamCredential', $id, []);
+
+                return ['success' => true, 'message' => 'Credential revoked successfully'];
+            },
+            null,
+            'revokeCredential'
         );
     }
 }

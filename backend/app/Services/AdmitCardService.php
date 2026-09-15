@@ -169,6 +169,33 @@ class AdmitCardService extends BaseService
     }
 
     /**
+     * Revoke an admit card (e.g. a candidate withdraws, or a seating/
+     * centre error needs correcting before regenerating). UNIQUE(studentId,
+     * examId) means the row stays and is marked revoked rather than
+     * deleted, the same reasoning as ExamCredentialService::revoke().
+     *
+     * @param string $id
+     * @return array
+     */
+    public function revoke(string $id): array
+    {
+        return $this->executeWithFallback(
+            function () use ($id) {
+                if (!$this->admitCardRepository->getById($id)) {
+                    throw new ServiceException("Admit card not found: {$id}", 'AdmitCardService', false);
+                }
+
+                $this->admitCardRepository->update($id, ['status' => 'revoked']);
+                $this->auditLog('REVOKE', 'AdmitCard', $id, []);
+
+                return ['success' => true, 'message' => 'Admit card revoked successfully'];
+            },
+            null,
+            'revokeAdmitCard'
+        );
+    }
+
+    /**
      * Generate an admit card for every candidate registered for an
      * exam who doesn't already have one - the admin "Generate Admit
      * Cards" bulk action operates on the whole exam roster, not one
