@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, LayoutDashboard, LogIn, Mail, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,7 @@ import { Alert } from "@/components/ui/alert";
 import { useSession } from "@/hooks/use-session";
 
 export function LoginForm() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { signIn } = useSession();
   const [identifier, setIdentifier] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -35,7 +34,7 @@ export function LoginForm() {
     try {
       const session = await signIn(identifier, password);
       toast.success(`Welcome back, ${session.name.split(" ")[0]}`);
-      router.push(session.role === "admin" ? "/admin/dashboard" : "/student/dashboard");
+      navigate(session.role === "admin" ? "/admin/dashboard" : "/student/dashboard");
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Unable to sign in.");
     } finally {
@@ -90,7 +89,7 @@ export function LoginForm() {
               Password<span className="ml-0.5 text-ember-600">*</span>
             </label>
             <Link
-              href="/contact"
+              to="/contact"
               className="rounded text-xs font-semibold text-royal-700 transition-colors hover:text-royal-800"
             >
               Forgot password?
@@ -144,7 +143,7 @@ export function LoginForm() {
 
       <p className="mt-6 text-center text-sm text-ink-500">
         Don&apos;t have an account?{" "}
-        <Link href="/register" className="font-semibold text-ember-600 hover:text-ember-700">
+        <Link to="/register" className="font-semibold text-ember-600 hover:text-ember-700">
           Register
         </Link>
       </p>

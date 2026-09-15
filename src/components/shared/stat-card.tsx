@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { ArrowRight, ArrowDownRight, ArrowUpRight, type LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Counter } from "./counter";
@@ -91,7 +91,7 @@ export function StatCard({
   );
 
   return href ? (
-    <Link href={href} className="block rounded-xl">
+    <Link to={href} className="block rounded-xl">
       {body}
     </Link>
   ) : (

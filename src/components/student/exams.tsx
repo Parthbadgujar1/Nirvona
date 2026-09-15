@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { CalendarDays, ClipboardList, IdCard, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -44,7 +44,7 @@ export function StudentExams() {
         actions={
           upcoming.length > 0 && (
             <Button asChild size="md">
-              <Link href="/student/admit-card">
+              <Link to="/student/admit-card">
                 <IdCard />
                 View Admit Card
               </Link>

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   ArrowRight, BarChart3, CheckCircle2, Circle, Clock, ListChecks, MinusCircle, Target,
@@ -134,13 +134,13 @@ export function ResultDetail({ examId }: { examId: string }) {
         actions={
           <>
             <Button asChild variant="secondary" size="md">
-              <Link href={`/student/answer-key?exam=${data.examId}`}>
+              <Link to={`/student/answer-key?exam=${data.examId}`}>
                 <ListChecks />
                 Answer key
               </Link>
             </Button>
             <Button asChild size="md">
-              <Link href="/student/performance">
+              <Link to="/student/performance">
                 <BarChart3 />
                 View Detailed Analysis
               </Link>
@@ -368,7 +368,7 @@ export function ResultDetail({ examId }: { examId: string }) {
                   </p>
                 </div>
                 <Button asChild variant="secondary" size="sm">
-                  <Link href={`/student/answer-key?exam=${data.examId}`}>
+                  <Link to={`/student/answer-key?exam=${data.examId}`}>
                     Open answer key
                     <ArrowRight />
                   </Link>
@@ -416,7 +416,7 @@ export function ResultDetail({ examId }: { examId: string }) {
           </div>
         </div>
         <Button asChild size="lg" className="shrink-0">
-          <Link href="/student/performance">
+          <Link to="/student/performance">
             Open analytics
             <ArrowRight />
           </Link>

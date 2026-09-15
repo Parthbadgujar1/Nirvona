@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import {
   CalendarClock, CheckCircle2, Copy, Eye, IdCard, KeyRound, MoreHorizontal, Pencil, Plus,
   Send, Users, XCircle,
@@ -165,7 +165,7 @@ export function ExamsManager() {
                         <DropdownLabel>{exam.id}</DropdownLabel>
                         <DropdownSeparator />
                         <DropdownItem asChild>
-                          <Link href={`/admin/exams/${exam.id}`}>
+                          <Link to={`/admin/exams/${exam.id}`}>
                             <Eye />
                             View candidates
                           </Link>
@@ -180,13 +180,13 @@ export function ExamsManager() {
                           Edit exam
                         </DropdownItem>
                         <DropdownItem asChild>
-                          <Link href="/admin/exam-credentials">
+                          <Link to="/admin/exam-credentials">
                             <KeyRound />
                             Manage credentials
                           </Link>
                         </DropdownItem>
                         <DropdownItem asChild>
-                          <Link href="/admin/admit-cards">
+                          <Link to="/admin/admit-cards">
                             <IdCard />
                             Admit cards
                           </Link>
@@ -271,16 +271,16 @@ export function ExamsManager() {
 
                   <div className="flex flex-wrap gap-2 border-t border-ink-100 p-5">
                     <Button asChild size="sm">
-                      <Link href={`/admin/exams/${exam.id}`}>
+                      <Link to={`/admin/exams/${exam.id}`}>
                         <Users />
                         {formatNumber(exam.candidates)} candidates
                       </Link>
                     </Button>
                     <Button asChild variant="secondary" size="sm">
-                      <Link href="/admin/exam-credentials">Credentials</Link>
+                      <Link to="/admin/exam-credentials">Credentials</Link>
                     </Button>
                     <Button asChild variant="ghost" size="sm">
-                      <Link href="/admin/admit-cards">Admit cards</Link>
+                      <Link to="/admin/admit-cards">Admit cards</Link>
                     </Button>
                   </div>
                 </Card>

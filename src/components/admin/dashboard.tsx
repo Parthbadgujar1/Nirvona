@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import {
   Activity, ArrowRight, Award, CalendarClock, CreditCard, FileCheck2, IdCard, KeyRound,
   ShoppingCart, TrendingUp, UserPlus, Users, Wallet,
@@ -64,10 +64,10 @@ export function AdminDashboard() {
         actions={
           <>
             <Button asChild variant="secondary" size="md">
-              <Link href="/admin/reports">Reports</Link>
+              <Link to="/admin/reports">Reports</Link>
             </Button>
             <Button asChild size="md">
-              <Link href="/admin/exams">
+              <Link to="/admin/exams">
                 <CalendarClock />
                 Create Exam
               </Link>
@@ -236,7 +236,7 @@ export function AdminDashboard() {
               </p>
             </div>
             <Button asChild variant="ghost" size="sm">
-              <Link href="/admin/exams">
+              <Link to="/admin/exams">
                 All exams
                 <ArrowRight />
               </Link>
@@ -268,7 +268,7 @@ export function AdminDashboard() {
                         </p>
                       </div>
                       <Button asChild variant="secondary" size="xs">
-                        <Link href={`/admin/exams/${exam.id}`}>Manage</Link>
+                        <Link to={`/admin/exams/${exam.id}`}>Manage</Link>
                       </Button>
                     </div>
 
@@ -352,7 +352,7 @@ export function AdminDashboard() {
 
           <div className="border-t border-ink-100 p-4">
             <Button asChild variant="secondary" size="sm" block>
-              <Link href="/admin/notifications">View notification log</Link>
+              <Link to="/admin/notifications">View notification log</Link>
             </Button>
           </div>
         </Card>
@@ -370,7 +370,7 @@ export function AdminDashboard() {
           ].map(({ label, href, icon: Icon }) => (
             <li key={href}>
               <Link
-                href={href}
+                to={href}
                 className="flex items-center gap-3 rounded-xl border border-ink-200 p-4 transition-all hover:-translate-y-0.5 hover:border-navy-200 hover:shadow-md"
               >
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-navy-50 text-navy-700">

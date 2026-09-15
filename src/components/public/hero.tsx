@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, MonitorPlay } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -75,13 +75,13 @@ export function Hero() {
               className="mt-9 flex flex-col gap-3 sm:flex-row"
             >
               <Button asChild size="xl">
-                <Link href="/courses">
+                <Link to="/courses">
                   Explore Programs
                   <ArrowRight />
                 </Link>
               </Button>
               <Button asChild variant="onDark" size="xl">
-                <Link href="/cbt">
+                <Link to="/cbt">
                   <MonitorPlay />
                   Learn About CBT
                 </Link>

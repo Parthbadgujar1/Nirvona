@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { MessageCircleQuestion } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ export function FaqSection({
                   Our team replies to every enquiry within one working day.
                 </p>
                 <Button asChild variant="secondary" size="sm" className="mt-4">
-                  <Link href="/contact">Contact support</Link>
+                  <Link to="/contact">Contact support</Link>
                 </Button>
               </div>
             )}

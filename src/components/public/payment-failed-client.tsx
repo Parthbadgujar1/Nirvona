@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { Link, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, LifeBuoy, RefreshCcw, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +18,7 @@ const CAUSES = [
 ];
 
 export function PaymentFailedClient() {
-  const params = useSearchParams();
+  const [params] = useSearchParams();
   const packageId = params.get("package") ?? "";
   const reason = params.get("reason") ?? "The transaction could not be completed.";
   const pkg = getPackage(packageId);
@@ -86,13 +85,13 @@ export function PaymentFailedClient() {
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg" className="flex-1">
-                <Link href={pkg ? `/checkout?package=${pkg.id}` : "/packages"}>
+                <Link to={pkg ? `/checkout?package=${pkg.id}` : "/packages"}>
                   <RefreshCcw />
                   Try payment again
                 </Link>
               </Button>
               <Button asChild variant="secondary" size="lg" className="flex-1">
-                <Link href="/contact">
+                <Link to="/contact">
                   <LifeBuoy />
                   Contact support
                 </Link>
@@ -101,7 +100,7 @@ export function PaymentFailedClient() {
 
             <p className="mt-5 text-center">
               <Link
-                href="/packages"
+                to="/packages"
                 className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-500 transition-colors hover:text-navy-900"
               >
                 <ArrowLeft className="size-4" aria-hidden />

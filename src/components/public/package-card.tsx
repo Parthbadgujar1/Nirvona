@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -102,13 +102,13 @@ export function PackageCard({
 
         <div className="mt-6 grid gap-2">
           <Button asChild variant={recommended ? "primary" : "navy"} size="lg" block>
-            <Link href={`/checkout?package=${pkg.id}`}>
+            <Link to={`/checkout?package=${pkg.id}`}>
               Buy Now
               <ArrowRight />
             </Link>
           </Button>
           <Button asChild variant="ghost" size="sm" block>
-            <Link href={`/packages/${pkg.id}`}>View Details</Link>
+            <Link to={`/packages/${pkg.id}`}>View Details</Link>
           </Button>
         </div>
       </div>

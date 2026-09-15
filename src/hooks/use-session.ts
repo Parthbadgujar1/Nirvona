@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router-dom";
 import type { Session } from "@/services/auth.service";
 import { authService } from "@/services/auth.service";
 import { CURRENT_ADMIN, CURRENT_STUDENT } from "@/data/students";
@@ -37,7 +37,7 @@ const DEMO_ADMIN: Session = {
  */
 export function useSession(fallback: "student" | "admin" = "student") {
   const { value, setValue, clear, hydrated } = useLocalStorage<Session | null>(SESSION_STORAGE_KEY, null);
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const session = value ?? (USE_MOCK_DATA ? (fallback === "admin" ? DEMO_ADMIN : DEMO_STUDENT) : null);
 
@@ -53,8 +53,8 @@ export function useSession(fallback: "student" | "admin" = "student") {
   const signOut = React.useCallback(async () => {
     await authService.logout();
     clear();
-    router.push("/login");
-  }, [clear, router]);
+    navigate("/login");
+  }, [clear, navigate]);
 
   return { session, isAuthenticated: Boolean(value), hydrated, signIn, signOut, setSession: setValue };
 }

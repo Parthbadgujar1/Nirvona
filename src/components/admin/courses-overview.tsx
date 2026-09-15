@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { ArrowUpRight, BookOpen, ClipboardList, Layers, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,7 +22,7 @@ export function CoursesOverview() {
         description="The five academic programs, their paper blueprints and package duration limits."
         actions={
           <Button asChild variant="secondary" size="md">
-            <Link href="/admin/packages">
+            <Link to="/admin/packages">
               <Layers />
               Manage packages
             </Link>
@@ -103,13 +103,13 @@ export function CoursesOverview() {
 
               <div className="mt-5 flex gap-2 border-t border-ink-100 pt-4">
                 <Button asChild variant="secondary" size="sm" className="flex-1">
-                  <Link href={`/courses/${course.slug}`}>
+                  <Link to={`/courses/${course.slug}`}>
                     Public page
                     <ArrowUpRight />
                   </Link>
                 </Button>
                 <Button asChild size="sm" className="flex-1">
-                  <Link href="/admin/packages">Packages</Link>
+                  <Link to="/admin/packages">Packages</Link>
                 </Button>
               </div>
             </Card>

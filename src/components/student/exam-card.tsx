@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { ArrowRight, CalendarDays, Clock, IdCard, MapPin, Timer, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -53,14 +53,14 @@ export function ExamCard({
         </p>
         {admitReady ? (
           <Button asChild size="sm">
-            <Link href="/student/admit-card">
+            <Link to="/student/admit-card">
               <IdCard />
               View Admit Card
             </Link>
           </Button>
         ) : resultReady ? (
           <Button asChild size="sm" variant="navy">
-            <Link href={resultHref ?? `/student/results/${exam.id}`}>
+            <Link to={resultHref ?? `/student/results/${exam.id}`}>
               <Trophy />
               View Result
               <ArrowRight />
@@ -68,7 +68,7 @@ export function ExamCard({
           </Button>
         ) : (
           <Button asChild size="sm" variant="secondary">
-            <Link href="/student/exams">Details</Link>
+            <Link to="/student/exams">Details</Link>
           </Button>
         )}
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { ArrowRight, BookOpen, CalendarRange, GraduationCap, Plus, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -39,7 +39,7 @@ export function ProgramsView() {
         breadcrumbs={[{ label: "Dashboard", href: "/student/dashboard" }, { label: "My Programs" }]}
         actions={
           <Button asChild size="md">
-            <Link href="/packages">
+            <Link to="/packages">
               <Plus />
               Add a program
             </Link>
@@ -161,13 +161,13 @@ export function ProgramsView() {
 
                         <div className="flex flex-wrap gap-2 border-t border-ink-100 p-5">
                           <Button asChild size="sm">
-                            <Link href="/student/exams">View exams</Link>
+                            <Link to="/student/exams">View exams</Link>
                           </Button>
                           <Button asChild variant="secondary" size="sm">
-                            <Link href={`/courses/${enrollment.courseSlug}`}>Syllabus</Link>
+                            <Link to={`/courses/${enrollment.courseSlug}`}>Syllabus</Link>
                           </Button>
                           <Button asChild variant="ghost" size="sm">
-                            <Link href="/student/payments">Receipt</Link>
+                            <Link to="/student/payments">Receipt</Link>
                           </Button>
                         </div>
                       </Card>
@@ -199,7 +199,7 @@ export function ProgramsView() {
                         </div>
                         <StatusBadge status={enrollment.status} />
                         <Button asChild variant="secondary" size="sm">
-                          <Link href={`/packages?course=${enrollment.courseSlug}`}>Renew</Link>
+                          <Link to={`/packages?course=${enrollment.courseSlug}`}>Renew</Link>
                         </Button>
                       </Card>
                     </li>
@@ -234,7 +234,7 @@ export function ProgramsView() {
                   </div>
                   <p className="mt-2 text-sm leading-relaxed text-ink-500">{course.tagline}</p>
                   <Button asChild variant="secondary" size="sm" className="mt-4">
-                    <Link href={`/courses/${course.slug}`}>
+                    <Link to={`/courses/${course.slug}`}>
                       View packages
                       <ArrowRight />
                     </Link>

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import {
   CalendarClock, CreditCard, Download, Eye, GraduationCap, IdCard, KeyRound, MoreHorizontal,
   Pencil, Users, UserCheck,
@@ -203,19 +203,19 @@ export function StudentsManager() {
               Edit details
             </DropdownItem>
             <DropdownItem asChild>
-              <Link href="/admin/purchases">
+              <Link to="/admin/purchases">
                 <CreditCard />
                 View payments
               </Link>
             </DropdownItem>
             <DropdownItem asChild>
-              <Link href="/admin/exams">
+              <Link to="/admin/exams">
                 <CalendarClock />
                 View exams
               </Link>
             </DropdownItem>
             <DropdownItem asChild>
-              <Link href="/admin/exam-credentials">
+              <Link to="/admin/exam-credentials">
                 <KeyRound />
                 Exam credentials
               </Link>
@@ -272,7 +272,7 @@ export function StudentsManager() {
               Export {selected.length > 0 ? `(${selected.length})` : "all"}
             </Button>
             <Button asChild size="md">
-              <Link href="/admin/purchases">
+              <Link to="/admin/purchases">
                 <CreditCard />
                 View purchases
               </Link>
@@ -432,7 +432,7 @@ export function StudentsManager() {
                   Close
                 </Button>
                 <Button asChild variant="navy">
-                  <Link href="/admin/purchases">View enrolment</Link>
+                  <Link to="/admin/purchases">View enrolment</Link>
                 </Button>
               </DialogFooter>
             </>

@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Bell, ChevronDown, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Search, Settings, User, X,
@@ -40,8 +39,8 @@ export function PortalShell({
   unreadCount = 0,
   profileHref,
 }: PortalShellProps) {
-  const pathname = usePathname();
-  const router = useRouter();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
   const { session, signOut, hydrated } = useSession(role);
   const { value: collapsed, setValue: setCollapsed } = useLocalStorage(
     `nirvona.${role}.sidebar`,
@@ -62,9 +61,9 @@ export function PortalShell({
   // very first render.
   React.useEffect(() => {
     if (hydrated && !session) {
-      router.replace("/login");
+      navigate("/login", { replace: true });
     }
-  }, [hydrated, session, router]);
+  }, [hydrated, session, navigate]);
 
   if (!session) {
     return (
@@ -92,7 +91,7 @@ export function PortalShell({
               return (
                 <li key={item.href}>
                   <Link
-                    href={item.href}
+                    to={item.href}
                     title={dense ? item.label : undefined}
                     aria-current={active ? "page" : undefined}
                     className={cn(
@@ -142,7 +141,7 @@ export function PortalShell({
           )}
         >
           {collapsed ? (
-            <Link href="/" aria-label="Nirvona home">
+            <Link to="/" aria-label="Nirvona home">
               <LogoMark size="sm" onDark />
             </Link>
           ) : (
@@ -226,7 +225,7 @@ export function PortalShell({
               <Menu className="size-5" />
             </button>
 
-            <Link href="/" className="lg:hidden" aria-label="Nirvona home">
+            <Link to="/" className="lg:hidden" aria-label="Nirvona home">
               <LogoMark size="sm" />
             </Link>
 
@@ -238,13 +237,13 @@ export function PortalShell({
                 className="hidden sm:inline-flex"
                 aria-label="Search"
               >
-                <Link href={role === "admin" ? "/admin/students" : "/student/exams"}>
+                <Link to={role === "admin" ? "/admin/students" : "/student/exams"}>
                   <Search />
                 </Link>
               </Button>
 
               <Link
-                href={notificationsHref}
+                to={notificationsHref}
                 aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ""}`}
                 className="relative inline-flex size-10 items-center justify-center rounded-lg text-ink-600 transition-colors hover:bg-ink-100 hover:text-navy-900"
               >
@@ -278,20 +277,20 @@ export function PortalShell({
                   <DropdownLabel>{session.email}</DropdownLabel>
                   <DropdownSeparator />
                   <DropdownItem asChild>
-                    <Link href={profileHref}>
+                    <Link to={profileHref}>
                       <User />
                       {role === "admin" ? "Admin profile" : "My profile"}
                     </Link>
                   </DropdownItem>
                   <DropdownItem asChild>
-                    <Link href={role === "admin" ? "/admin/settings" : "/student/support"}>
+                    <Link to={role === "admin" ? "/admin/settings" : "/student/support"}>
                       <Settings />
                       {role === "admin" ? "Settings" : "Help & support"}
                     </Link>
                   </DropdownItem>
                   <DropdownSeparator />
                   <DropdownItem asChild>
-                    <Link href={role === "admin" ? "/student/dashboard" : "/admin/dashboard"}>
+                    <Link to={role === "admin" ? "/student/dashboard" : "/admin/dashboard"}>
                       <X className="rotate-45" />
                       Switch to {role === "admin" ? "student" : "admin"} demo
                     </Link>
@@ -332,7 +331,7 @@ export function PortalShell({
             return (
               <li key={item.href}>
                 <Link
-                  href={item.href}
+                  to={item.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex flex-col items-center gap-1 px-1 py-2.5 text-[0.625rem] font-medium transition-colors",

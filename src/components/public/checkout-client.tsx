@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight, BadgePercent, Building2, CheckCircle2, CreditCard, Landmark, Lock, ShieldCheck,
@@ -42,8 +41,8 @@ const CHECKOUT_STEPS = [
 ];
 
 export function CheckoutClient() {
-  const params = useSearchParams();
-  const router = useRouter();
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
   const { addOrder } = useOrders();
   const { session, hydrated } = useSession();
   const profile = useAsync(() => studentService.me(), [session?.id]);
@@ -77,9 +76,9 @@ export function CheckoutClient() {
   // time, then breaks unpredictably on the next render.
   React.useEffect(() => {
     if (hydrated && !session) {
-      router.replace("/login");
+      navigate("/login", { replace: true });
     }
-  }, [hydrated, session, router]);
+  }, [hydrated, session, navigate]);
 
   if (hydrated && !session) {
     return <div className="container-nv py-20" aria-busy="true" />;
@@ -136,10 +135,10 @@ export function CheckoutClient() {
         onVerifying: () => setProcessing(true),
       });
       addOrder(order);
-      router.push(`/payment/success?order=${order.id}`);
+      navigate(`/payment/success?order=${order.id}`);
     } catch (error) {
       const reason = error instanceof Error ? error.message : "Payment failed";
-      router.push(
+      navigate(
         `/payment/failed?package=${pkg!.id}&reason=${encodeURIComponent(reason)}`,
       );
     } finally {
@@ -221,7 +220,7 @@ export function CheckoutClient() {
               </dl>
               <p className="mt-5 border-t border-ink-100 pt-4 text-xs text-ink-500">
                 Wrong details?{" "}
-                <Link href="/student/profile" className="font-semibold text-royal-700 hover:underline">
+                <Link to="/student/profile" className="font-semibold text-royal-700 hover:underline">
                   Update your profile
                 </Link>{" "}
                 before completing payment.
@@ -436,7 +435,7 @@ export function CheckoutClient() {
 
             <p className="mt-4 text-center text-xs text-ink-400">
               Changed your mind?{" "}
-              <Link href={`/packages/${pkg.id}`} className="font-semibold text-royal-700 hover:underline">
+              <Link to={`/packages/${pkg.id}`} className="font-semibold text-royal-700 hover:underline">
                 Review package details
               </Link>
             </p>

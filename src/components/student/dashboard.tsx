@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import {
   ArrowRight, BookMarked, CalendarDays, Clock, Download, GraduationCap, IdCard, MapPin,
   Target, TrendingUp, Trophy, Users,
@@ -71,7 +71,7 @@ export function StudentDashboard() {
         </div>
         {upcoming && (
           <Button asChild size="lg" className="shrink-0">
-            <Link href="/student/admit-card">
+            <Link to="/student/admit-card">
               <IdCard />
               View Upcoming Exam
             </Link>
@@ -85,7 +85,7 @@ export function StudentDashboard() {
           title={`${unread.length} new notification${unread.length === 1 ? "" : "s"}`}
           action={
             <Button asChild variant="secondary" size="sm">
-              <Link href="/student/notifications">View all</Link>
+              <Link to="/student/notifications">View all</Link>
             </Button>
           }
         >
@@ -177,16 +177,16 @@ export function StudentDashboard() {
 
                   <div className="mt-6 flex flex-wrap gap-2 border-t border-ink-100 pt-5">
                     <Button asChild size="md">
-                      <Link href="/student/admit-card">
+                      <Link to="/student/admit-card">
                         <IdCard />
                         View Admit Card
                       </Link>
                     </Button>
                     <Button asChild variant="secondary" size="md">
-                      <Link href="/student/exams">All exams</Link>
+                      <Link to="/student/exams">All exams</Link>
                     </Button>
                     <Button asChild variant="ghost" size="md">
-                      <Link href="/cbt">Exam-day instructions</Link>
+                      <Link to="/cbt">Exam-day instructions</Link>
                     </Button>
                   </div>
                 </div>
@@ -209,7 +209,7 @@ export function StudentDashboard() {
                 description="Your score against the cohort average and the topper."
                 action={
                   <Button asChild variant="ghost" size="sm">
-                    <Link href="/student/performance">
+                    <Link to="/student/performance">
                       Full analytics
                       <ArrowRight />
                     </Link>
@@ -278,7 +278,7 @@ export function StudentDashboard() {
                 </dl>
 
                 <Button asChild variant="secondary" size="sm" block className="mt-5">
-                  <Link href="/student/programs">Manage programs</Link>
+                  <Link to="/student/programs">Manage programs</Link>
                 </Button>
               </Card>
             </Reveal>
@@ -325,7 +325,7 @@ export function StudentDashboard() {
                     {latest.totalCandidates.toLocaleString("en-IN")}
                   </p>
                   <Button asChild size="sm" block className="mt-4">
-                    <Link href={`/student/results/${latest.examId}`}>
+                    <Link to={`/student/results/${latest.examId}`}>
                       <TrendingUp />
                       View Detailed Analysis
                     </Link>
@@ -354,7 +354,7 @@ export function StudentDashboard() {
                 ].map(({ label, href, icon: Icon }) => (
                   <li key={href}>
                     <Link
-                      href={href}
+                      to={href}
                       className="flex items-center gap-3 rounded-lg border border-ink-200 px-3.5 py-2.5 text-sm font-medium text-navy-900 transition-colors hover:border-navy-200 hover:bg-ink-50"
                     >
                       <Icon className="size-4 text-ink-400" aria-hidden />

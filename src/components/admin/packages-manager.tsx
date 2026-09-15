@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { ArrowUpRight, Boxes, Download, Sparkles, Tag, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -125,7 +125,7 @@ export function PackagesManager() {
       hideOnCard: true,
       cell: (row) => (
         <Button asChild variant="secondary" size="xs">
-          <Link href={`/packages/${row.id}`}>
+          <Link to={`/packages/${row.id}`}>
             View
             <ArrowUpRight />
           </Link>

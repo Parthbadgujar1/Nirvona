@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import {
   Bell, BellOff, CheckCheck, CreditCard, IdCard, Info, Mail, MessageSquare, Monitor, Trophy,
 } from "lucide-react";
@@ -88,7 +88,7 @@ export function NotificationsView() {
                     </Badge>
                     <span className="text-2xs text-ink-400">{formatDateTime(item.createdAt)}</span>
                     <Button asChild variant="ghost" size="xs" className="ml-auto">
-                      <Link href={meta.href}>Open</Link>
+                      <Link to={meta.href}>Open</Link>
                     </Button>
                     {!item.read && (
                       <Button

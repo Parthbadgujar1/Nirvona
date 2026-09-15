@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { CreditCard, Download, Printer, Receipt as ReceiptIcon, RotateCcw, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -84,7 +84,7 @@ export function PaymentsView() {
           </Button>
         ) : row.status === "failed" ? (
           <Button asChild variant="ghost" size="xs">
-            <Link href={`/checkout?package=${row.packageId}`}>
+            <Link to={`/checkout?package=${row.packageId}`}>
               <RotateCcw />
               Retry
             </Link>

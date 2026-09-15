@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { Link, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, CalendarCheck, CheckCircle2, Download, Printer, Receipt as ReceiptIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -25,7 +24,7 @@ const CHECKOUT_STEPS = [
 ];
 
 export function PaymentSuccessClient() {
-  const params = useSearchParams();
+  const [params] = useSearchParams();
   const orderId = params.get("order");
   const { orders, hydrated } = useOrders();
   const [showReceipt, setShowReceipt] = React.useState(false);
@@ -158,7 +157,7 @@ export function PaymentSuccessClient() {
               Download Receipt
             </Button>
             <Button asChild variant="navy" size="lg" className="flex-1">
-              <Link href="/student/dashboard">
+              <Link to="/student/dashboard">
                 Go to Dashboard
                 <ArrowRight />
               </Link>
@@ -194,7 +193,7 @@ export function PaymentSuccessClient() {
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <Button asChild variant="secondary" size="sm">
-              <Link href="/student/exams">View upcoming exams</Link>
+              <Link to="/student/exams">View upcoming exams</Link>
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setShowReceipt((s) => !s)}>
               <ReceiptIcon />

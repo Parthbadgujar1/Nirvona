@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { COURSES } from "@/data/courses";
@@ -74,7 +74,7 @@ export function Footer() {
                   {column.links.map((link) => (
                     <li key={link.href}>
                       <Link
-                        href={link.href}
+                        to={link.href}
                         className="text-sm transition-colors hover:text-white"
                       >
                         {link.label}
@@ -93,22 +93,22 @@ export function Footer() {
           </p>
           <ul className="flex flex-wrap gap-x-6 gap-y-2 text-xs">
             <li>
-              <Link href="/faqs" className="transition-colors hover:text-white">
+              <Link to="/faqs" className="transition-colors hover:text-white">
                 Help centre
               </Link>
             </li>
             <li>
-              <Link href="/contact" className="transition-colors hover:text-white">
+              <Link to="/contact" className="transition-colors hover:text-white">
                 Privacy policy
               </Link>
             </li>
             <li>
-              <Link href="/contact" className="transition-colors hover:text-white">
+              <Link to="/contact" className="transition-colors hover:text-white">
                 Terms of service
               </Link>
             </li>
             <li>
-              <Link href="/contact" className="transition-colors hover:text-white">
+              <Link to="/contact" className="transition-colors hover:text-white">
                 Refund policy
               </Link>
             </li>

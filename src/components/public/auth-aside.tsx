@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { BarChart3, IdCard, ShieldCheck, Trophy } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 
@@ -65,7 +65,7 @@ export function AuthAside() {
         </div>
         <p className="mt-6 text-xs text-white/40">
           Need help?{" "}
-          <Link href="/contact" className="underline transition-colors hover:text-white">
+          <Link to="/contact" className="underline transition-colors hover:text-white">
             Contact support
           </Link>
         </p>

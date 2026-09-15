@@ -1,5 +1,4 @@
-import Image from "next/image";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 /**
@@ -54,12 +53,11 @@ export function LogoMark({
       )}
       style={{ width: onDark ? px + 8 : px, height: onDark ? px + 8 : px }}
     >
-      <Image
+      <img
         src={LOGO_SRC}
         alt="Nirvona"
         width={px}
         height={px}
-        priority
         className="size-full object-contain"
       />
     </span>
@@ -113,7 +111,7 @@ export function Logo({
 
   if (!href) return content;
   return (
-    <Link href={href} aria-label="Nirvona Education Tech — home" className="inline-flex rounded-md">
+    <Link to={href} aria-label="Nirvona Education Tech — home" className="inline-flex rounded-md">
       {content}
     </Link>
   );

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { ArrowRight, BookOpen, ClipboardList, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { Course } from "@/types";
@@ -23,7 +23,7 @@ const ACCENT_CHIP = {
 export function CourseCard({ course, className }: { course: Course; className?: string }) {
   return (
     <Link
-      href={`/courses/${course.slug}`}
+      to={`/courses/${course.slug}`}
       className={cn(
         "group relative flex h-full flex-col overflow-hidden rounded-xl border border-ink-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-navy-200 hover:shadow-xl",
         className,

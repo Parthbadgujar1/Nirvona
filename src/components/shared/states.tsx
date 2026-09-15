@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { AlertOctagon, RefreshCcw, type LucideIcon } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
@@ -59,7 +59,7 @@ export function EmptyState({
           {action &&
             (action.href ? (
               <Button asChild size="sm">
-                <Link href={action.href}>{action.label}</Link>
+                <Link to={action.href}>{action.label}</Link>
               </Button>
             ) : (
               <Button size="sm" onClick={action.onClick}>
@@ -69,7 +69,7 @@ export function EmptyState({
           {secondaryAction &&
             (secondaryAction.href ? (
               <Button asChild variant="secondary" size="sm">
-                <Link href={secondaryAction.href}>{secondaryAction.label}</Link>
+                <Link to={secondaryAction.href}>{secondaryAction.label}</Link>
               </Button>
             ) : (
               <Button variant="secondary" size="sm" onClick={secondaryAction.onClick}>

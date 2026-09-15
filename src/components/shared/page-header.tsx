@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +16,7 @@ export function Breadcrumbs({
           <li key={item.label} className="flex items-center gap-1">
             {index > 0 && <ChevronRight className="size-3 text-ink-300" aria-hidden />}
             {item.href ? (
-              <Link href={item.href} className="rounded transition-colors hover:text-navy-900">
+              <Link to={item.href} className="rounded transition-colors hover:text-navy-900">
                 {item.label}
               </Link>
             ) : (

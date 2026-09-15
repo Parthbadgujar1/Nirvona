@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import {
   Award, CheckCircle2, Download, Eye, FileCheck2, FileSpreadsheet, Percent, Send, Trophy,
   Users,
@@ -169,7 +169,7 @@ export function ResultsManager() {
       cell: (row) => (
         <div className="flex justify-end gap-2">
           <Button asChild variant="secondary" size="xs">
-            <Link href={`/student/results/${row.examId}`}>
+            <Link to={`/student/results/${row.examId}`}>
               <Eye />
               View
             </Link>

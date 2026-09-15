@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { Download, IdCard, KeyRound, MapPin, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -136,7 +136,7 @@ export function ExamCandidates({ examId }: { examId: string }) {
               Export candidates
             </Button>
             <Button asChild size="md">
-              <Link href="/admin/exam-credentials">
+              <Link to="/admin/exam-credentials">
                 <KeyRound />
                 Upload Credentials
               </Link>
@@ -217,7 +217,7 @@ export function ExamCandidates({ examId }: { examId: string }) {
             label="Admit card coverage"
           />
           <Button asChild variant="secondary" size="sm" className="mt-4">
-            <Link href="/admin/admit-cards">Generate remaining</Link>
+            <Link to="/admin/admit-cards">Generate remaining</Link>
           </Button>
         </Card>
 
@@ -234,7 +234,7 @@ export function ExamCandidates({ examId }: { examId: string }) {
             label="Credential coverage"
           />
           <Button asChild variant="secondary" size="sm" className="mt-4">
-            <Link href="/admin/exam-credentials">Upload credentials</Link>
+            <Link to="/admin/exam-credentials">Upload credentials</Link>
           </Button>
         </Card>
       </div>

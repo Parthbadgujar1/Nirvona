@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import {
   AlertTriangle, ArrowRight, ArrowUpRight, CheckCircle2, Clock, Lightbulb, Target,
   TrendingUp, Trophy,
@@ -86,7 +86,7 @@ export function PerformanceDashboard() {
         breadcrumbs={[{ label: "Dashboard", href: "/student/dashboard" }, { label: "Performance" }]}
         actions={
           <Button asChild variant="secondary" size="md">
-            <Link href="/student/results">
+            <Link to="/student/results">
               <Trophy />
               All results
             </Link>
@@ -395,7 +395,7 @@ export function PerformanceDashboard() {
               </p>
             </div>
             <Button asChild size="lg" className="shrink-0">
-              <Link href="/student/exams">
+              <Link to="/student/exams">
                 View upcoming exam
                 <ArrowRight />
               </Link>

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { ArrowRight, CalendarDays, Clock, MapPin, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,7 @@ export function UpcomingExams() {
             className="max-w-2xl"
           />
           <Button asChild variant="secondary" size="md" className="shrink-0">
-            <Link href="/cbt">
+            <Link to="/cbt">
               Full exam guide
               <ArrowRight />
             </Link>

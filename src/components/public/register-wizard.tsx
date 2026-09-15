@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft, ArrowRight, CheckCircle2, Eye, EyeOff, Mail, Phone, UserPlus,
@@ -58,7 +57,7 @@ function passwordScore(password: string) {
 }
 
 export function RegisterWizard() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { setSession } = useSession();
   const [step, setStep] = React.useState(0);
   const [values, setValues] = React.useState<FormState>(EMPTY);
@@ -156,11 +155,11 @@ export function RegisterWizard() {
           <p className="mt-1 font-display text-xl font-bold tracking-tight text-navy-900">{done}</p>
         </div>
         <div className="mt-8 grid gap-2 sm:grid-cols-2">
-          <Button size="lg" onClick={() => router.push("/courses")}>
+          <Button size="lg" onClick={() => navigate("/courses")}>
             Choose a program
             <ArrowRight />
           </Button>
-          <Button variant="secondary" size="lg" onClick={() => router.push("/student/dashboard")}>
+          <Button variant="secondary" size="lg" onClick={() => navigate("/student/dashboard")}>
             Go to dashboard
           </Button>
         </div>
@@ -415,11 +414,11 @@ export function RegisterWizard() {
                     />
                     <label htmlFor="terms" className="cursor-pointer text-sm leading-relaxed text-ink-600">
                       I agree to the{" "}
-                      <Link href="/contact" className="font-semibold text-royal-700 hover:underline">
+                      <Link to="/contact" className="font-semibold text-royal-700 hover:underline">
                         terms of service
                       </Link>{" "}
                       and{" "}
-                      <Link href="/contact" className="font-semibold text-royal-700 hover:underline">
+                      <Link to="/contact" className="font-semibold text-royal-700 hover:underline">
                         privacy policy
                       </Link>
                       .
@@ -464,7 +463,7 @@ export function RegisterWizard() {
 
       <p className="mt-6 text-center text-sm text-ink-500">
         Already have an account?{" "}
-        <Link href="/login" className="font-semibold text-ember-600 hover:text-ember-700">
+        <Link to="/login" className="font-semibold text-ember-600 hover:text-ember-700">
           Login
         </Link>
       </p>

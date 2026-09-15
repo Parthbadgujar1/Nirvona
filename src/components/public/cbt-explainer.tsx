@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { ArrowRight, Check, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SectionHeading } from "@/components/shared/section-heading";
@@ -34,7 +34,7 @@ export function CbtExplainer() {
               ))}
             </ul>
             <Button asChild variant="navy" size="lg" className="mt-9">
-              <Link href="/cbt">
+              <Link to="/cbt">
                 Read the full CBT guide
                 <ArrowRight />
               </Link>

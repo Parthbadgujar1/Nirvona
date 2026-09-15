@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SectionHeading } from "@/components/shared/section-heading";
@@ -19,7 +19,7 @@ export function ProgramsSection() {
             className="max-w-2xl"
           />
           <Button asChild variant="secondary" size="md" className="shrink-0">
-            <Link href="/courses">
+            <Link to="/courses">
               All programs
               <ArrowRight />
             </Link>
@@ -42,7 +42,7 @@ export function ProgramsSection() {
                 </p>
               </div>
               <Button asChild variant="onDark" size="md" className="mt-6 self-start">
-                <Link href="/packages">
+                <Link to="/packages">
                   Compare packages
                   <ArrowRight />
                 </Link>

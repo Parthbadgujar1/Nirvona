@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { Download, IdCard, Info, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -189,7 +189,7 @@ export function AdmitCardPage() {
           <p className="no-print flex items-start gap-2 text-xs text-ink-500">
             <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
             Facing an issue with your admit card or centre allocation?{" "}
-            <Link href="/student/support" className="font-semibold text-royal-700 hover:underline">
+            <Link to="/student/support" className="font-semibold text-royal-700 hover:underline">
               Contact support
             </Link>{" "}
             at least 5 days before the examination.

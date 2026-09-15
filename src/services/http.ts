@@ -5,8 +5,11 @@
  * Automatically routes to backend API when available, falls back to mock data.
  */
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
-export const USE_MOCK_DATA = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
+// import.meta.env, not process.env.NEXT_PUBLIC_* - Vite exposes only
+// VITE_-prefixed env vars to client code, injected at build time the
+// same way Next's NEXT_PUBLIC_ prefix worked.
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api";
+export const USE_MOCK_DATA = import.meta.env.VITE_USE_MOCK_DATA === "true";
 
 export const MOCK_LATENCY_MS = 220;
 

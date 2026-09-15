@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { ArrowRight, BarChart3, Target, TrendingUp, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -50,7 +50,7 @@ export function ResultsList() {
         breadcrumbs={[{ label: "Dashboard", href: "/student/dashboard" }, { label: "Results" }]}
         actions={
           <Button asChild variant="navy" size="md">
-            <Link href="/student/performance">
+            <Link to="/student/performance">
               <BarChart3 />
               Performance analytics
             </Link>
@@ -122,7 +122,7 @@ export function ResultsList() {
                 </dl>
 
                 <Button asChild size="md" className="shrink-0">
-                  <Link href={`/student/results/${result.examId}`}>
+                  <Link to={`/student/results/${result.examId}`}>
                     View Detailed Analysis
                     <ArrowRight />
                   </Link>

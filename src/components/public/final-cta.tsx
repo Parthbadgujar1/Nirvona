@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LogoMark } from "@/components/brand/logo";
@@ -35,13 +35,13 @@ export function FinalCta() {
 
           <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
             <Button asChild size="xl">
-              <Link href="/register">
+              <Link to="/register">
                 Create your account
                 <ArrowRight />
               </Link>
             </Button>
             <Button asChild variant="onDark" size="xl">
-              <Link href="/packages">Compare packages</Link>
+              <Link to="/packages">Compare packages</Link>
             </Button>
           </div>
 

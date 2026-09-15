@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams } from "react-router-dom";
 import { CheckCircle2, Download, ListChecks, MinusCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ const FILTERS: { id: Filter; label: string; icon?: typeof CheckCircle2 }[] = [
 ];
 
 export function AnswerKeyView() {
-  const params = useSearchParams();
+  const [params] = useSearchParams();
   const results = useAsync(() => studentService.results(), []);
   const [examId, setExamId] = React.useState(params.get("exam") ?? "");
 

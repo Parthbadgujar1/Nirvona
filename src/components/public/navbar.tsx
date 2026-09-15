@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, LayoutDashboard, Menu, ShieldCheck, X } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
@@ -12,7 +11,7 @@ import { publicNav } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 export function Navbar() {
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   const [scrolled, setScrolled] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [programsOpen, setProgramsOpen] = React.useState(false);
@@ -71,7 +70,7 @@ export function Navbar() {
                   onMouseLeave={scheduleProgramsClose}
                 >
                   <Link
-                    href="/courses"
+                    to="/courses"
                     aria-expanded={programsOpen}
                     className={cn(
                       "inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
@@ -101,7 +100,7 @@ export function Navbar() {
                           {COURSES.map((course) => (
                             <Link
                               key={course.slug}
-                              href={`/courses/${course.slug}`}
+                              to={`/courses/${course.slug}`}
                               className="flex items-start gap-3 rounded-xl p-3 transition-colors hover:bg-ink-50"
                             >
                               <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-navy-50 font-display text-xs font-bold text-navy-800">
@@ -118,7 +117,7 @@ export function Navbar() {
                             </Link>
                           ))}
                           <Link
-                            href="/packages"
+                            to="/packages"
                             className="mt-1 flex items-center justify-between rounded-xl bg-navy-900 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-navy-800"
                           >
                             Compare all packages
@@ -132,7 +131,7 @@ export function Navbar() {
               ) : (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  to={item.href}
                   aria-current={isActive(item.href) ? "page" : undefined}
                   className={cn(
                     "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
@@ -149,10 +148,10 @@ export function Navbar() {
 
           <div className="hidden items-center gap-2 lg:flex">
             <Button asChild variant="ghost" size="md">
-              <Link href="/login">Login</Link>
+              <Link to="/login">Login</Link>
             </Button>
             <Button asChild size="md">
-              <Link href="/register">Get Started</Link>
+              <Link to="/register">Get Started</Link>
             </Button>
           </div>
 
@@ -190,7 +189,7 @@ export function Navbar() {
                 {publicNav.map((item) => (
                   <li key={item.href}>
                     <Link
-                      href={item.href}
+                      to={item.href}
                       className={cn(
                         "block rounded-lg px-3 py-2.5 text-[0.95rem] font-medium transition-colors",
                         isActive(item.href)
@@ -211,7 +210,7 @@ export function Navbar() {
                 {COURSES.map((course) => (
                   <li key={course.slug}>
                     <Link
-                      href={`/courses/${course.slug}`}
+                      to={`/courses/${course.slug}`}
                       className="block rounded-lg border border-ink-200 px-3 py-2.5 text-sm font-semibold text-navy-900"
                     >
                       {course.shortName}
@@ -222,20 +221,20 @@ export function Navbar() {
 
               <div className="mt-5 grid gap-2 border-t border-ink-100 pt-5">
                 <Button asChild size="lg" block>
-                  <Link href="/register">Get Started</Link>
+                  <Link to="/register">Get Started</Link>
                 </Button>
                 <Button asChild variant="secondary" size="lg" block>
-                  <Link href="/login">Login</Link>
+                  <Link to="/login">Login</Link>
                 </Button>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <Button asChild variant="ghost" size="sm">
-                    <Link href="/student/dashboard">
+                    <Link to="/student/dashboard">
                       <LayoutDashboard />
                       Student demo
                     </Link>
                   </Button>
                   <Button asChild variant="ghost" size="sm">
-                    <Link href="/admin/dashboard">
+                    <Link to="/admin/dashboard">
                       <ShieldCheck />
                       Admin demo
                     </Link>

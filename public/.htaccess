@@ -1,0 +1,20 @@
+# SPA fallback for Apache (Namecheap shared hosting and similar).
+#
+# This is a client-side-routed React app - every route past "/" (e.g.
+# /admin/dashboard, /packages/abc-123) exists only in the browser via
+# react-router-dom, not as a real file on the server. Without this
+# rule, a direct visit or page refresh on any of those URLs 404s,
+# because Apache looks for a matching file/directory that doesn't
+# exist. Rewrite everything that isn't a real static asset back to
+# index.html and let the React app's router take it from there.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Don't rewrite real files or directories (JS/CSS/images/etc).
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  RewriteRule ^ index.html [L]
+</IfModule>

@@ -8,15 +8,12 @@ backend/.env
 node_modules/
 backend/vendor/
 
-# Next.js build output
-.next/
-out/
-build/
+# Vite build output
 dist/
+dist-ssr/
 
 # TypeScript build info
 *.tsbuildinfo
-next-env.d.ts
 
 # Logs
 backend/storage/logs/*.log

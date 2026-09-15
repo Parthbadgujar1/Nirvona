@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import { ArrowRight, Target, TrendingUp, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SectionHeading } from "@/components/shared/section-heading";
@@ -76,7 +76,7 @@ export function AnalyticsPreview() {
                 <span className="font-semibold text-white">Insight:</span> {PERFORMANCE.summary}
               </p>
               <Button asChild variant="onDark" size="md" className="shrink-0">
-                <Link href="/student/performance">
+                <Link to="/student/performance">
                   Open the live dashboard
                   <ArrowRight />
                 </Link>
