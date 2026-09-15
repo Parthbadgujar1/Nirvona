@@ -27,7 +27,7 @@ import {
   SCORE_DISTRIBUTION,
 } from "@/data/results";
 import type { AnswerKey, AnswerKeyEntry, AppNotification, Exam, ExamCentre, UploadValidationResult } from "@/types";
-import { resolve, post, put } from "./http";
+import { resolve, post, put, del } from "./http";
 
 /**
  * Admin Service - Backend Integrated
@@ -70,6 +70,9 @@ export const adminService = {
   centre: (id: string) => resolve(getCentre(id), `/admin/exam-centres/${id}`),
   createCentre: (payload: Record<string, unknown>): Promise<ExamCentre> =>
     post("/admin/exam-centres", payload),
+  updateCentre: (id: string, payload: Record<string, unknown>): Promise<ExamCentre> =>
+    put(`/admin/exam-centres/${id}`, payload),
+  deleteCentre: (id: string): Promise<void> => del(`/admin/exam-centres/${id}`),
 
   // Exam Management
   candidates: (examId: string) =>

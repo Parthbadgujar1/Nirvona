@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Building2, MapPin, MonitorCog, Phone, Plus, Users } from "lucide-react";
+import {
+  Building2, MapPin, MonitorCog, MoreHorizontal, Pencil, Phone, Plus, Trash2, Users,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,10 +14,14 @@ import { ProgressBar } from "@/components/ui/progress";
 import {
   Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Dropdown, DropdownContent, DropdownItem, DropdownLabel, DropdownSeparator, DropdownTrigger,
+} from "@/components/ui/dropdown";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { FilterBar } from "@/components/shared/filters";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { EmptyState, ErrorState, LoadingState, StaggerGroup, StaggerItem } from "@/components/shared/states";
 import { useAsync } from "@/hooks/use-async";
 import { adminService } from "@/services/admin.service";
@@ -23,17 +29,21 @@ import { INDIAN_STATES } from "@/data/site";
 import { formatNumber } from "@/lib/format";
 import type { ExamCentre } from "@/types";
 
+const EMPTY_DRAFT = {
+  name: "", code: "", address: "", city: "", state: "Rajasthan", pincode: "",
+  capacity: "400", labs: "5", contact: "",
+};
+
 export function CentresManager() {
   const centres = useAsync(() => adminService.centres(), []);
   const exams = useAsync(() => adminService.exams(), []);
   const [search, setSearch] = React.useState("");
   const [filters, setFilters] = React.useState<Record<string, string>>({ status: "all" });
   const [formOpen, setFormOpen] = React.useState(false);
-  const [draft, setDraft] = React.useState({
-    name: "", code: "", address: "", city: "", state: "Rajasthan", pincode: "",
-    capacity: "400", labs: "5", contact: "",
-  });
+  const [editing, setEditing] = React.useState<ExamCentre | null>(null);
+  const [draft, setDraft] = React.useState(EMPTY_DRAFT);
   const [saving, setSaving] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<ExamCentre | null>(null);
 
   if (centres.status === "error") return <ErrorState onRetry={centres.reload} />;
   if (centres.status === "loading" || !centres.data) return <LoadingState label="Loading examination centres" />;
@@ -50,6 +60,28 @@ export function CentresManager() {
   const totalLabs = all.reduce((sum, c) => sum + c.labs, 0);
   const active = all.filter((c) => c.status === "active").length;
 
+  function openCreate() {
+    setEditing(null);
+    setDraft(EMPTY_DRAFT);
+    setFormOpen(true);
+  }
+
+  function openEdit(centre: ExamCentre) {
+    setEditing(centre);
+    setDraft({
+      name: centre.name,
+      code: centre.code,
+      address: centre.address ?? "",
+      city: centre.city,
+      state: centre.state ?? "Rajasthan",
+      pincode: centre.pincode ?? "",
+      capacity: String(centre.capacity ?? 0),
+      labs: String(centre.labs ?? 0),
+      contact: centre.contact ?? "",
+    });
+    setFormOpen(true);
+  }
+
   async function save(event: React.FormEvent) {
     event.preventDefault();
     if (!draft.name || !draft.code || !draft.city) {
@@ -58,7 +90,7 @@ export function CentresManager() {
     }
     setSaving(true);
     try {
-      await adminService.createCentre({
+      const payload = {
         name: draft.name,
         code: draft.code.toUpperCase(),
         address: draft.address || null,
@@ -68,17 +100,36 @@ export function CentresManager() {
         capacity: Number(draft.capacity) || 0,
         labs: Number(draft.labs) || 0,
         contact: draft.contact || null,
-      });
+      };
+      if (editing) {
+        await adminService.updateCentre(editing.id, payload);
+      } else {
+        await adminService.createCentre(payload);
+      }
       centres.reload();
       setFormOpen(false);
-      setDraft({ name: "", code: "", address: "", city: "", state: "Rajasthan", pincode: "", capacity: "400", labs: "5", contact: "" });
-      toast.success("Examination centre added", {
-        description: "The centre is now available when scheduling examinations.",
+      setEditing(null);
+      setDraft(EMPTY_DRAFT);
+      toast.success(editing ? "Examination centre updated" : "Examination centre added", {
+        description: editing
+          ? "Changes are now reflected wherever this centre is used."
+          : "The centre is now available when scheduling examinations.",
       });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not add this centre.");
+      toast.error(error instanceof Error ? error.message : "Could not save this centre.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    try {
+      await adminService.deleteCentre(deleteTarget.id);
+      centres.reload();
+      toast.success(`${deleteTarget.name} deleted`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not delete this centre.");
     }
   }
 
@@ -88,7 +139,7 @@ export function CentresManager() {
         title="Exam Centres"
         description="Manage examination centres, capacity and lab infrastructure."
         actions={
-          <Button size="md" onClick={() => setFormOpen(true)}>
+          <Button size="md" onClick={openCreate}>
             <Plus />
             Add centre
           </Button>
@@ -130,7 +181,7 @@ export function CentresManager() {
           icon={Building2}
           title="No centres match this search"
           description="Clear the filters, or add a new examination centre."
-          action={{ label: "Add centre", onClick: () => setFormOpen(true) }}
+          action={{ label: "Add centre", onClick: openCreate }}
         />
       ) : (
         <StaggerGroup className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -150,7 +201,28 @@ export function CentresManager() {
                     <Badge tone="navy" size="sm">
                       {centre.code}
                     </Badge>
-                    <StatusBadge status={centre.status} size="sm" />
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={centre.status} size="sm" />
+                      <Dropdown>
+                        <DropdownTrigger asChild>
+                          <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${centre.name}`}>
+                            <MoreHorizontal />
+                          </Button>
+                        </DropdownTrigger>
+                        <DropdownContent>
+                          <DropdownLabel>{centre.code}</DropdownLabel>
+                          <DropdownSeparator />
+                          <DropdownItem onSelect={() => openEdit(centre)}>
+                            <Pencil />
+                            Edit centre
+                          </DropdownItem>
+                          <DropdownItem destructive onSelect={() => setDeleteTarget(centre)}>
+                            <Trash2 />
+                            Delete centre
+                          </DropdownItem>
+                        </DropdownContent>
+                      </Dropdown>
+                    </div>
                   </div>
 
                   <h2 className="mt-3 font-display text-base font-semibold leading-snug text-navy-900">
@@ -215,12 +287,14 @@ export function CentresManager() {
         </StaggerGroup>
       )}
 
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+      <Dialog open={formOpen} onOpenChange={(open) => { setFormOpen(open); if (!open) setEditing(null); }}>
         <DialogContent size="lg">
           <DialogHeader>
-            <DialogTitle>Add examination centre</DialogTitle>
+            <DialogTitle>{editing ? `Edit ${editing.name}` : "Add examination centre"}</DialogTitle>
             <DialogDescription>
-              Centres become selectable when scheduling an examination once they are active.
+              {editing
+                ? "Changes apply immediately and are reflected wherever this centre is used."
+                : "Centres become selectable when scheduling an examination once they are active."}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={save}>
@@ -316,12 +390,34 @@ export function CentresManager() {
                 Cancel
               </Button>
               <Button type="submit" loading={saving}>
-                Add centre
+                {editing ? "Save changes" : "Add centre"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title={`Delete ${deleteTarget?.name}?`}
+        description="This removes the centre permanently. Exams already assigned to it are unaffected but will show no centre until reassigned."
+        confirmLabel="Delete centre"
+        tone="danger"
+        details={
+          deleteTarget && (
+            <div className="rounded-xl border border-ink-200 bg-canvas p-4 text-sm">
+              <p className="font-semibold text-navy-900">
+                {deleteTarget.code} · {deleteTarget.name}
+              </p>
+              <p className="mt-1 text-ink-500">
+                {deleteTarget.city}, {deleteTarget.state}
+              </p>
+            </div>
+          )
+        }
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

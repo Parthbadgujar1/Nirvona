@@ -61,6 +61,8 @@ return function (App $app) {
         $group->get('/exam-centres', [ExamCentreController::class, 'list']);
         $group->get('/exam-centres/{id}', [ExamCentreController::class, 'get']);
         $group->post('/exam-centres', [ExamCentreController::class, 'create']);
+        $group->put('/exam-centres/{id}', [ExamCentreController::class, 'update']);
+        $group->delete('/exam-centres/{id}', [ExamCentreController::class, 'delete']);
 
         // Exam-day Operations: Candidates
         $group->get('/exams/{examId}/candidates', [ExamCandidateController::class, 'listByExam']);

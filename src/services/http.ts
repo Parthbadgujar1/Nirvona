@@ -296,3 +296,19 @@ export async function get<T>(
     },
   );
 }
+
+/**
+ * DELETE request wrapper
+ */
+export async function del<T>(
+  endpoint: string,
+  options?: Omit<RequestInit, "method" | "body">,
+): Promise<T> {
+  return fetchApi<T>(
+    endpoint,
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+}

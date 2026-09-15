@@ -52,4 +52,27 @@ class ExamCentreController
         $response->getBody()->write(json_encode($result));
         return $response->withStatus($statusCode)->withHeader('Content-Type', 'application/json');
     }
+
+    /**
+     * PUT /api/admin/exam-centres/{id}
+     */
+    public function update(Request $request, Response $response, array $args): Response
+    {
+        $data = json_decode($request->getBody(), true) ?? [];
+        $result = $this->examCentreService->update($args['id'], $data);
+        $statusCode = $result['success'] ? 200 : 400;
+        $response->getBody()->write(json_encode($result));
+        return $response->withStatus($statusCode)->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
+     * DELETE /api/admin/exam-centres/{id}
+     */
+    public function delete(Request $request, Response $response, array $args): Response
+    {
+        $result = $this->examCentreService->delete($args['id']);
+        $statusCode = $result['success'] ? 200 : 400;
+        $response->getBody()->write(json_encode($result));
+        return $response->withStatus($statusCode)->withHeader('Content-Type', 'application/json');
+    }
 }
