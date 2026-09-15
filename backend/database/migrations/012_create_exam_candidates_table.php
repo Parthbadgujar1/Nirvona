@@ -12,9 +12,9 @@ return [
     'up' => function (\PDO $pdo) {
         $sql = "
             CREATE TABLE IF NOT EXISTS exam_candidates (
-                id CHAR(36) PRIMARY KEY,
-                studentId CHAR(36) NOT NULL,
-                examId CHAR(36) NOT NULL,
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                studentId UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+                examId UUID NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
                 studentName VARCHAR(255),
                 seatNo VARCHAR(20),
                 admitCardStatus VARCHAR(20) DEFAULT 'pending',
@@ -22,10 +22,8 @@ return [
                 attendance VARCHAR(20) DEFAULT 'pending',
                 createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(studentId, examId),
-                CONSTRAINT fk_exam_candidates_student FOREIGN KEY (studentId) REFERENCES students(id) ON DELETE CASCADE,
-                CONSTRAINT fk_exam_candidates_exam FOREIGN KEY (examId) REFERENCES exams(id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                UNIQUE(studentId, examId)
+            );
 
             CREATE INDEX idx_exam_candidates_examId ON exam_candidates(examId);
             CREATE INDEX idx_exam_candidates_studentId ON exam_candidates(studentId);
@@ -35,6 +33,6 @@ return [
     },
 
     'down' => function (\PDO $pdo) {
-        $pdo->exec("DROP TABLE IF EXISTS exam_candidates;");
+        $pdo->exec("DROP TABLE IF EXISTS exam_candidates CASCADE;");
     },
 ];

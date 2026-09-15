@@ -34,18 +34,15 @@ return [
             ['neet', 'NEET Advantage', 'NEET', '720 marks. 200 minutes. Rehearsed until it is routine.', 24, 56],
         ];
 
-        // MySQL has no ON CONFLICT - ON DUPLICATE KEY UPDATE against the
-        // slug primary key is the equivalent upsert; VALUES(col) is
-        // MySQL's stand-in for Postgres's EXCLUDED.col.
         $upsertCourse = $pdo->prepare("
             INSERT INTO courses (slug, name, shortName, tagline, maxDurationMonths, totalTests, status)
             VALUES (?, ?, ?, ?, ?, ?, 'active')
-            ON DUPLICATE KEY UPDATE
-                name = VALUES(name),
-                shortName = VALUES(shortName),
-                tagline = VALUES(tagline),
-                maxDurationMonths = VALUES(maxDurationMonths),
-                totalTests = VALUES(totalTests),
+            ON CONFLICT (slug) DO UPDATE SET
+                name = EXCLUDED.name,
+                shortName = EXCLUDED.shortName,
+                tagline = EXCLUDED.tagline,
+                maxDurationMonths = EXCLUDED.maxDurationMonths,
+                totalTests = EXCLUDED.totalTests,
                 status = 'active'
         ");
         foreach ($courses as $c) {
@@ -73,24 +70,15 @@ return [
         ];
         $includesBase = ['examAccess' => true, 'analytics' => true, 'answerKey' => true, 'doubtSupport' => false, 'mentorship' => false, 'printedMaterial' => false];
 
-        // Raw INSERT here (not through PackageRepository/BaseRepository),
-        // so it must generate the id itself - there's no DB-side default
-        // (MySQL has no portable function-default UUID; ids are
-        // generated in PHP everywhere in this app - see
-        // BaseRepository::create()).
         $insertPackage = $pdo->prepare("
             INSERT INTO packages (
-                id, courseSlug, name, duration, durationLabel, durationMonths, price, originalPrice,
+                courseSlug, name, duration, durationLabel, durationMonths, price, originalPrice,
                 discountPercent, tests, recommended, tagline, features, benefits, includes, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
         ");
 
-        // Raw PDO here (not through a Repository), so no ColumnCase
-        // normalization applies - MySQL returns columns exactly as
-        // declared (courseSlug), unlike Postgres, which folded every
-        // unquoted identifier to lowercase (courseslug).
         $existing = $pdo->query("SELECT courseSlug, duration FROM packages")->fetchAll(\PDO::FETCH_ASSOC);
-        $existingKeys = array_map(fn($r) => $r['courseSlug'] . '|' . $r['duration'], $existing);
+        $existingKeys = array_map(fn($r) => $r['courseslug'] . '|' . $r['duration'], $existing);
 
         foreach (array_keys($maxDuration) as $course) {
             $q = $priceTable[$course];
@@ -200,18 +188,14 @@ return [
                     // The one pre-existing row (real JEE 1Y package,
                     // already referenced by test payments/enrollments)
                     // - fill in only what it was missing, keep its real
-                    // id, price and test count untouched. These JSON
-                    // columns are NULL (not "[]"/"{}") when unset - MySQL
-                    // doesn't allow a literal default on a JSON column,
-                    // so there's no stored empty-string form to compare
-                    // against the way the original Postgres version did.
+                    // id, price and test count untouched.
                     $stmt = $pdo->prepare("
                         UPDATE packages SET
                             durationLabel = COALESCE(durationLabel, ?),
                             tagline = COALESCE(tagline, ?),
-                            features = CASE WHEN features IS NULL THEN ? ELSE features END,
-                            benefits = CASE WHEN benefits IS NULL THEN ? ELSE benefits END,
-                            includes = CASE WHEN includes IS NULL THEN ? ELSE includes END
+                            features = CASE WHEN features = '[]' THEN ? ELSE features END,
+                            benefits = CASE WHEN benefits = '[]' THEN ? ELSE benefits END,
+                            includes = CASE WHEN includes = '{}' OR includes = '[]' THEN ? ELSE includes END
                         WHERE courseSlug = ? AND duration = ?
                     ");
                     $stmt->execute([
@@ -227,7 +211,6 @@ return [
                 }
 
                 $insertPackage->execute([
-                    \Ramsey\Uuid\Uuid::uuid4()->toString(),
                     $course,
                     $name,
                     $bp['duration'],
@@ -237,7 +220,7 @@ return [
                     $bp['originalPrice'],
                     $discountPercent,
                     $bp['tests'],
-                    $bp['recommended'] ? 1 : 0,
+                    $bp['recommended'] ? 't' : 'f',
                     $bp['tagline'],
                     json_encode($bp['features']),
                     json_encode($bp['benefits']),

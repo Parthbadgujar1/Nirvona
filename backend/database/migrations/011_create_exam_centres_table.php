@@ -12,7 +12,7 @@ return [
     'up' => function (\PDO $pdo) {
         $sql = "
             CREATE TABLE IF NOT EXISTS exam_centres (
-                id CHAR(36) PRIMARY KEY,
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 name VARCHAR(255) NOT NULL,
                 code VARCHAR(50) UNIQUE NOT NULL,
                 address TEXT,
@@ -25,7 +25,7 @@ return [
                 status VARCHAR(20) DEFAULT 'active',
                 createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            );
 
             CREATE INDEX idx_exam_centres_city ON exam_centres(city);
             CREATE INDEX idx_exam_centres_status ON exam_centres(status);
@@ -35,6 +35,6 @@ return [
     },
 
     'down' => function (\PDO $pdo) {
-        $pdo->exec("DROP TABLE IF EXISTS exam_centres;");
+        $pdo->exec("DROP TABLE IF EXISTS exam_centres CASCADE;");
     },
 ];

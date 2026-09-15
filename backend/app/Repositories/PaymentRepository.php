@@ -166,16 +166,14 @@ class PaymentRepository extends BaseRepository
      */
     public function getMonthlyRevenue(int $months = 6): array
     {
-        // DATE_FORMAT/DATE_SUB, not Postgres's TO_CHAR/`::INTERVAL` cast -
-        // neither exists in MySQL.
         return $this->select(
-            "SELECT DATE_FORMAT(date, '%Y-%m') as ym,
+            "SELECT TO_CHAR(date, 'YYYY-MM') as ym,
                     SUM(total) as revenue,
                     COUNT(*) as purchases
              FROM {$this->table}
              WHERE status = 'successful'
-               AND date >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
-             GROUP BY DATE_FORMAT(date, '%Y-%m')
+               AND date >= (CURRENT_DATE - (? || ' months')::INTERVAL)
+             GROUP BY TO_CHAR(date, 'YYYY-MM')
              ORDER BY ym ASC",
             [$months]
         );
@@ -208,7 +206,7 @@ class PaymentRepository extends BaseRepository
         return $this->select(
             "SELECT * FROM {$this->table}
              WHERE status = 'failed'
-             AND createdAt > NOW() - INTERVAL 7 DAY
+             AND createdAt > NOW() - INTERVAL '7 days'
              AND retryCount < 3
              ORDER BY createdAt ASC
              LIMIT 100"

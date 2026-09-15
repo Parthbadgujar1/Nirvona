@@ -14,23 +14,19 @@ require __DIR__ . '/vendor/autoload.php';
 
 (new \Symfony\Component\Dotenv\Dotenv())->bootEnv(__DIR__ . '/.env');
 
-$host = $_ENV['DB_HOST'] ?? '127.0.0.1';
-$port = $_ENV['DB_PORT'] ?? '3306';
+$host = $_ENV['DB_HOST'] ?? 'localhost';
+$port = $_ENV['DB_PORT'] ?? '5432';
 $database = $_ENV['DB_DATABASE'] ?? 'nirvona';
-$username = $_ENV['DB_USERNAME'] ?? 'root';
-$password = $_ENV['DB_PASSWORD'] ?? '';
+$username = $_ENV['DB_USERNAME'] ?? 'postgres';
+$password = $_ENV['DB_PASSWORD'] ?? 'secret';
 
-$dsn = "mysql:host={$host};port={$port};dbname={$database};charset=utf8mb4";
+$dsn = "pgsql:host={$host};port={$port};dbname={$database}";
 
 try {
     $pdo = new PDO($dsn, $username, $password, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        // Every migration's up() runs a multi-statement string
-        // (CREATE TABLE + CREATE INDEX...) through one exec() call -
-        // PDO_MYSQL drops every statement after the first without this.
-        PDO::MYSQL_ATTR_MULTI_STATEMENTS => true,
     ]);
-    echo "Connected to MySQL\n";
+    echo "Connected to PostgreSQL\n";
 
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -62,23 +58,16 @@ try {
         $migration = require $file;
 
         echo "Running migration: {$name}... ";
-        // No transaction wrapper: MySQL/InnoDB DDL (CREATE/ALTER/DROP
-        // TABLE) causes an implicit commit, which would silently end a
-        // beginTransaction() partway through and then throw "There is
-        // no active transaction" on the later commit() - unlike
-        // Postgres, DDL here just isn't transactional at all. Every
-        // migration is written with IF NOT EXISTS/IF EXISTS guards (or,
-        // for the few ALTER TABLE statements that can't use those in
-        // MySQL, relies on schema_migrations tracking below) so a
-        // migration is still safe to fix up and re-run after a partial
-        // failure.
+        $pdo->beginTransaction();
         try {
             $migration['up']($pdo);
             $stmt = $pdo->prepare("INSERT INTO schema_migrations (migration) VALUES (?)");
             $stmt->execute([$name]);
+            $pdo->commit();
             echo "OK\n";
             $ran++;
         } catch (\Throwable $e) {
+            $pdo->rollBack();
             throw $e;
         }
     }

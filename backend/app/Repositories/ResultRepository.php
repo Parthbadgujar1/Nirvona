@@ -43,7 +43,7 @@ class ResultRepository extends BaseRepository
              FROM {$this->table} r
              LEFT JOIN students s ON s.id = r.studentId
              WHERE r.examId = ?
-             ORDER BY r.`rank` ASC",
+             ORDER BY r.rank ASC",
             [$examId]
         );
     }
@@ -116,7 +116,7 @@ class ResultRepository extends BaseRepository
              FROM {$this->table} r
              JOIN students s ON r.studentId = s.id
              WHERE r.examId = ?
-             ORDER BY r.`rank` ASC
+             ORDER BY r.rank ASC
              LIMIT ?",
             [$examId, $limit]
         );

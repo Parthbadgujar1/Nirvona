@@ -170,7 +170,7 @@ class ExamRepository extends BaseRepository
         $query = '%' . $query . '%';
         return $this->select(
             "SELECT * FROM {$this->table}
-             WHERE name LIKE ? OR courseSlug LIKE ?
+             WHERE name ILIKE ? OR courseSlug ILIKE ?
              ORDER BY date DESC
              LIMIT 50",
             [$query, $query]

@@ -7,7 +7,7 @@ return [
     'up' => function (\PDO $pdo) {
         $sql = "
             CREATE TABLE IF NOT EXISTS exams (
-                id CHAR(36) PRIMARY KEY,
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 name VARCHAR(255) NOT NULL,
                 courseSlug VARCHAR(100),
                 date TIMESTAMP NOT NULL,
@@ -16,7 +16,7 @@ return [
                 durationMinutes INT,
                 totalQuestions INT,
                 totalMarks INT,
-                centreId CHAR(36),
+                centreId UUID,
                 status VARCHAR(50) DEFAULT 'draft',
                 instructions TEXT,
                 candidates INT DEFAULT 0,
@@ -25,7 +25,7 @@ return [
                 syllabusScope TEXT,
                 createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            );
 
             CREATE INDEX idx_exams_status ON exams(status);
             CREATE INDEX idx_exams_date ON exams(date);
@@ -36,6 +36,6 @@ return [
     },
 
     'down' => function (\PDO $pdo) {
-        $pdo->exec("DROP TABLE IF EXISTS exams;");
+        $pdo->exec("DROP TABLE IF EXISTS exams CASCADE;");
     },
 ];

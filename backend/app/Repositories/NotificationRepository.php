@@ -75,13 +75,12 @@ class NotificationRepository extends BaseRepository
         }
         // AppNotification.read, not isRead - only present on the
         // student-feed join (getForStudent), not the plain admin list.
-        // Driver-dependent representation of BOOLEAN/TINYINT(1): PDO_PGSQL
-        // returned the strings "t"/"f", PDO_MYSQL (with
-        // ATTR_STRINGIFY_FETCHES off) returns a real int 1/0 - (bool) 'f'
-        // is true and (bool) 0 loses nothing but this still has to check
-        // every real shape explicitly rather than assume one driver.
+        // PDO_PGSQL returns boolean columns as the strings "t"/"f", not
+        // native PHP bools - (bool) 'f' is true, so this has to compare
+        // explicitly rather than cast, or every notification would come
+        // back "read".
         if (array_key_exists('isRead', $row)) {
-            $row['read'] = in_array($row['isRead'], ['t', true, 1, '1'], true);
+            $row['read'] = $row['isRead'] === 't' || $row['isRead'] === true;
             unset($row['isRead']);
         }
         return $row;
@@ -150,15 +149,10 @@ class NotificationRepository extends BaseRepository
             return;
         }
 
-        // MySQL has no ON CONFLICT - ON DUPLICATE KEY UPDATE against the
-        // UNIQUE(notificationId, studentId) constraint (migration 025) is
-        // the equivalent "insert, or do nothing if it already exists"
-        // (the self-assignment is a true no-op, it only exists to make
-        // this an UPDATE instead of an error on the duplicate key).
         $stmt = $this->db->prepare(
             "INSERT INTO notification_recipients (notificationId, studentId)
              VALUES (?, ?)
-             ON DUPLICATE KEY UPDATE id = id"
+             ON CONFLICT (notificationId, studentId) DO NOTHING"
         );
 
         foreach ($studentIds as $studentId) {

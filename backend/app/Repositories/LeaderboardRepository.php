@@ -23,7 +23,7 @@ class LeaderboardRepository extends BaseRepository
     public function getByExam(string $examId, int $limit = 100): array
     {
         return $this->select(
-            "SELECT * FROM {$this->table} WHERE examId = ? ORDER BY `rank` ASC LIMIT ?",
+            "SELECT * FROM {$this->table} WHERE examId = ? ORDER BY rank ASC LIMIT ?",
             [$examId, $limit]
         );
     }
@@ -41,7 +41,7 @@ class LeaderboardRepository extends BaseRepository
         return $this->select(
             "SELECT * FROM {$this->table}
              WHERE courseSlug = ? AND period = ?
-             ORDER BY `rank` ASC
+             ORDER BY rank ASC
              LIMIT ?",
             [$courseSlug, $period, $limit]
         );

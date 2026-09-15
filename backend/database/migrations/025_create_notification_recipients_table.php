@@ -13,16 +13,14 @@ return [
     'up' => function (\PDO $pdo) {
         $sql = "
             CREATE TABLE IF NOT EXISTS notification_recipients (
-                id CHAR(36) PRIMARY KEY,
-                notificationId CHAR(36) NOT NULL,
-                studentId CHAR(36) NOT NULL,
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                notificationId UUID NOT NULL REFERENCES notifications(id) ON DELETE CASCADE,
+                studentId UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
                 isRead BOOLEAN DEFAULT FALSE,
-                readAt TIMESTAMP NULL,
+                readAt TIMESTAMP,
                 createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(notificationId, studentId),
-                CONSTRAINT fk_notification_recipients_notification FOREIGN KEY (notificationId) REFERENCES notifications(id) ON DELETE CASCADE,
-                CONSTRAINT fk_notification_recipients_student FOREIGN KEY (studentId) REFERENCES students(id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                UNIQUE(notificationId, studentId)
+            );
 
             CREATE INDEX idx_notification_recipients_studentId ON notification_recipients(studentId);
             CREATE INDEX idx_notification_recipients_notificationId ON notification_recipients(notificationId);
@@ -32,6 +30,6 @@ return [
     },
 
     'down' => function (\PDO $pdo) {
-        $pdo->exec("DROP TABLE IF EXISTS notification_recipients;");
+        $pdo->exec("DROP TABLE IF EXISTS notification_recipients CASCADE;");
     },
 ];

@@ -9,17 +9,16 @@ return [
     'up' => function (\PDO $pdo) {
         $sql = "
             CREATE TABLE IF NOT EXISTS subjects (
-                id CHAR(36) PRIMARY KEY,
-                courseSlug VARCHAR(50) NOT NULL,
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                courseSlug VARCHAR(50) NOT NULL REFERENCES courses(slug) ON DELETE CASCADE,
                 code VARCHAR(20) NOT NULL,
                 name VARCHAR(100) NOT NULL,
                 color VARCHAR(20),
                 orderIndex INT DEFAULT 0,
                 createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(courseSlug, code),
-                CONSTRAINT fk_subjects_course FOREIGN KEY (courseSlug) REFERENCES courses(slug) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                UNIQUE(courseSlug, code)
+            );
 
             CREATE INDEX idx_subjects_courseSlug ON subjects(courseSlug);
         ";
@@ -28,6 +27,6 @@ return [
     },
 
     'down' => function (\PDO $pdo) {
-        $pdo->exec("DROP TABLE IF EXISTS subjects;");
+        $pdo->exec("DROP TABLE IF EXISTS subjects CASCADE;");
     },
 ];

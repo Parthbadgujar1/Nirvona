@@ -62,7 +62,7 @@ class ExamCentreRepository extends BaseRepository
         $query = '%' . $query . '%';
         return $this->select(
             "SELECT * FROM {$this->table}
-             WHERE name LIKE ? OR city LIKE ? OR code LIKE ?
+             WHERE name ILIKE ? OR city ILIKE ? OR code ILIKE ?
              LIMIT 50",
             [$query, $query, $query]
         );
