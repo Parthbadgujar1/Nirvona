@@ -210,6 +210,16 @@ class AdminController
     }
 
     /**
+     * GET /api/admin/reports
+     */
+    public function getReports(Request $request, Response $response): Response
+    {
+        $result = $this->adminService->getReports();
+        $response->getBody()->write(json_encode($result));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
      * Parse ?page=&pageSize= query params with sane bounds
      *
      * @param Request $request

@@ -9,6 +9,9 @@ use Nirvona\Repositories\ResultRepository;
 use Nirvona\Repositories\EnrollmentRepository;
 use Nirvona\Repositories\ExamCandidateRepository;
 use Nirvona\Repositories\ActivityRepository;
+use Nirvona\Repositories\AdmitCardRepository;
+use Nirvona\Repositories\ExamCredentialRepository;
+use Nirvona\Repositories\ExamCentreRepository;
 use Nirvona\Exceptions\ServiceException;
 
 /**
@@ -28,6 +31,9 @@ class AdminService extends BaseService
     private EnrollmentRepository $enrollmentRepository;
     private ExamCandidateRepository $examCandidateRepository;
     private ActivityRepository $activityRepository;
+    private AdmitCardRepository $admitCardRepository;
+    private ExamCredentialRepository $examCredentialRepository;
+    private ExamCentreRepository $examCentreRepository;
 
     public function __construct(
         StudentRepository $studentRepository,
@@ -37,6 +43,9 @@ class AdminService extends BaseService
         EnrollmentRepository $enrollmentRepository,
         ExamCandidateRepository $examCandidateRepository,
         ActivityRepository $activityRepository,
+        AdmitCardRepository $admitCardRepository,
+        ExamCredentialRepository $examCredentialRepository,
+        ExamCentreRepository $examCentreRepository,
         \Psr\Log\LoggerInterface $logger,
         CircuitBreaker $circuitBreaker
     ) {
@@ -48,6 +57,9 @@ class AdminService extends BaseService
         $this->enrollmentRepository = $enrollmentRepository;
         $this->examCandidateRepository = $examCandidateRepository;
         $this->activityRepository = $activityRepository;
+        $this->admitCardRepository = $admitCardRepository;
+        $this->examCredentialRepository = $examCredentialRepository;
+        $this->examCentreRepository = $examCentreRepository;
     }
 
     /**
@@ -448,6 +460,79 @@ class AdminService extends BaseService
             },
             null,
             'reactivateStudent'
+        );
+    }
+
+    /**
+     * List the available operational reports with real record counts.
+     *
+     * Was routed straight at getDashboardStats() (a completely different
+     * response shape - an object of top-line figures, not an array of
+     * report definitions) as a placeholder until this existed. The
+     * frontend's ReportsCentre calls `.map()` on the response expecting
+     * an array, so that placeholder crashed the whole page white
+     * whenever anyone opened /admin/reports.
+     *
+     * Report *definitions* (id/name/description/category) mirror the
+     * static catalog every report's export column mapping already keys
+     * off (see reports-centre.tsx's COLUMN_MAP) - only `records` and
+     * `updated` are live. The actual downloadable CSV content for each
+     * report is a separate, larger piece of work (per-report data
+     * endpoints) not covered here.
+     *
+     * @return array
+     */
+    public function getReports(): array
+    {
+        return $this->executeWithFallback(
+            function () {
+                $today = date('Y-m-d');
+                $reports = [
+                    [
+                        'id' => 'RPT-01', 'name' => 'Student Master Report',
+                        'description' => 'Every registered student with contact, class, course and enrolment status.',
+                        'category' => 'People', 'records' => $this->studentRepository->count(), 'updated' => $today,
+                    ],
+                    [
+                        'id' => 'RPT-02', 'name' => 'Purchase Report',
+                        'description' => 'All purchase attempts with package, amount and payment gateway reference.',
+                        'category' => 'Finance', 'records' => $this->paymentRepository->count(), 'updated' => $today,
+                    ],
+                    [
+                        'id' => 'RPT-03', 'name' => 'Payment Report',
+                        'description' => 'Settled, pending, failed and refunded transactions with reconciliation status.',
+                        'category' => 'Finance', 'records' => $this->paymentRepository->count(), 'updated' => $today,
+                    ],
+                    [
+                        'id' => 'RPT-04', 'name' => 'Exam Participation Report',
+                        'description' => 'Registered vs appeared vs absent candidates, per exam and per centre.',
+                        'category' => 'Examinations', 'records' => $this->examCandidateRepository->count(), 'updated' => $today,
+                    ],
+                    [
+                        'id' => 'RPT-05', 'name' => 'Admit Card Report',
+                        'description' => 'Generation, publication and delivery status of every admit card.',
+                        'category' => 'Examinations', 'records' => $this->admitCardRepository->count(), 'updated' => $today,
+                    ],
+                    [
+                        'id' => 'RPT-06', 'name' => 'Credential Report',
+                        'description' => 'Exam-hall credential assignment status with validation exceptions.',
+                        'category' => 'Examinations', 'records' => $this->examCredentialRepository->count(), 'updated' => $today,
+                    ],
+                    [
+                        'id' => 'RPT-07', 'name' => 'Result Report',
+                        'description' => 'Scores, ranks, percentiles and subject-wise breakdown per candidate.',
+                        'category' => 'Evaluation', 'records' => $this->resultRepository->count(), 'updated' => $today,
+                    ],
+                    [
+                        'id' => 'RPT-08', 'name' => 'Centre Performance Report',
+                        'description' => 'Average score, attendance and infrastructure utilisation per centre.',
+                        'category' => 'Examinations', 'records' => $this->examCentreRepository->count(), 'updated' => $today,
+                    ],
+                ];
+                return ['success' => true, 'data' => $reports];
+            },
+            ['success' => true, 'data' => []],
+            'getReports'
         );
     }
 

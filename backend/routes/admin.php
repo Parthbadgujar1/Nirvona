@@ -145,10 +145,13 @@ return function (App $app) {
         $group->post('/exams/{examId}/publish-results', [ResultController::class, 'publish']);
 
         // Reports & Analytics
-        // TODO: these previously pointed at AdminController::getReports()/getAnalytics(),
-        // methods that never existed - every request to them would have fatal-errored.
-        // Routed at the dashboard stats for now until real reporting is built.
-        $group->get('/reports', [AdminController::class, 'getDashboard']);
+        // /analytics has no caller anywhere in the frontend (the Analytics
+        // page uses the specific /analytics/revenue-trend etc. routes
+        // above instead) - left on the dashboard-stats placeholder since
+        // nothing actually hits it. /reports is real: ReportsCentre calls
+        // it and expects an array of report definitions, which
+        // getDashboard's object shape isn't - see AdminService::getReports().
+        $group->get('/reports', [AdminController::class, 'getReports']);
         $group->get('/analytics', [AdminController::class, 'getDashboard']);
     });
 
