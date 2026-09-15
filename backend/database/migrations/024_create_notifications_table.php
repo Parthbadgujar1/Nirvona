@@ -14,7 +14,7 @@ return [
     'up' => function (\PDO $pdo) {
         $sql = "
             CREATE TABLE IF NOT EXISTS notifications (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                id CHAR(36) PRIMARY KEY,
                 title VARCHAR(255) NOT NULL,
                 message TEXT NOT NULL,
                 type VARCHAR(50) DEFAULT 'general',
@@ -24,7 +24,7 @@ return [
                 status VARCHAR(20) DEFAULT 'pending',
                 createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
             CREATE INDEX idx_notifications_status ON notifications(status);
             CREATE INDEX idx_notifications_channel ON notifications(channel);
@@ -35,6 +35,6 @@ return [
     },
 
     'down' => function (\PDO $pdo) {
-        $pdo->exec("DROP TABLE IF EXISTS notifications CASCADE;");
+        $pdo->exec("DROP TABLE IF EXISTS notifications;");
     },
 ];

@@ -10,10 +10,15 @@
  * per-admin sub-role - so nothing depends on it besides the now-removed
  * dead code in Admin::isSuperAdmin() and AuthService's `adminRole`
  * JWT claim.
+ *
+ * No "IF EXISTS" - MySQL doesn't support that clause on
+ * ALTER TABLE DROP COLUMN (a MariaDB-only extension). Safe regardless:
+ * the migration runner tracks applied migrations and never re-runs
+ * this file, and 023 always creates the column first.
  */
 return [
     'up' => function (\PDO $pdo) {
-        $pdo->exec("ALTER TABLE admins DROP COLUMN IF EXISTS role;");
+        $pdo->exec("ALTER TABLE admins DROP COLUMN role;");
     },
 
     'down' => function (\PDO $pdo) {

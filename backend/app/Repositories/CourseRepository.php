@@ -17,7 +17,7 @@ class CourseRepository extends BaseRepository
 {
     protected string $table = 'courses';
 
-    /** JSONB columns that need decoding after every read */
+    /** JSON columns that need decoding after every read */
     private const JSON_COLUMNS = [
         'audience', 'highlights', 'examPattern', 'patternNotes', 'faqs', 'stats',
     ];
@@ -139,14 +139,14 @@ class CourseRepository extends BaseRepository
     {
         $query = '%' . $query . '%';
         $rows = $this->select(
-            "SELECT * FROM {$this->table} WHERE name ILIKE ? OR shortName ILIKE ? LIMIT 50",
+            "SELECT * FROM {$this->table} WHERE name LIKE ? OR shortName LIKE ? LIMIT 50",
             [$query, $query]
         );
         return array_map([$this, 'decodeJsonColumns'], $rows);
     }
 
     /**
-     * json_decode every JSONB column in a row
+     * json_decode every JSON column in a row
      *
      * @param array $row
      * @return array
@@ -154,15 +154,21 @@ class CourseRepository extends BaseRepository
     private function decodeJsonColumns(array $row): array
     {
         foreach (self::JSON_COLUMNS as $column) {
-            if (isset($row[$column]) && is_string($row[$column])) {
-                $row[$column] = json_decode($row[$column], true) ?? [];
+            if (!array_key_exists($column, $row)) {
+                continue;
             }
+            // JSON NULL, no DB-side default (MySQL disallows one) - a
+            // row created without this field comes back NULL rather
+            // than "[]"; normalize to an empty array either way.
+            $row[$column] = is_string($row[$column])
+                ? (json_decode($row[$column], true) ?? [])
+                : ($row[$column] ?? []);
         }
         return $row;
     }
 
     /**
-     * json_encode any JSONB column present in the payload before writing
+     * json_encode any JSON column present in the payload before writing
      *
      * @param array $data
      * @return array

@@ -13,6 +13,14 @@
  * ON DELETE SET NULL everywhere: losing a course/centre/package should
  * never cascade-delete exams, payments, or results - it should just
  * orphan the reference.
+ *
+ * MySQL syntax differences from the original Postgres version: multiple
+ * ADD CONSTRAINT clauses in one ALTER TABLE need their own statements
+ * here (MySQL accepts the comma-separated form too, kept as-is), and
+ * dropping a foreign key uses DROP FOREIGN KEY, not DROP CONSTRAINT
+ * (MySQL doesn't support "DROP CONSTRAINT IF EXISTS" for foreign keys
+ * at all, so down() isn't guarded the way every other migration's down()
+ * is - reversing this twice will error, same as a real re-run would).
  */
 return [
     'up' => function (\PDO $pdo) {
@@ -40,15 +48,15 @@ return [
     'down' => function (\PDO $pdo) {
         $sql = "
             ALTER TABLE exams
-                DROP CONSTRAINT IF EXISTS fk_exams_centre,
-                DROP CONSTRAINT IF EXISTS fk_exams_course;
+                DROP FOREIGN KEY fk_exams_centre,
+                DROP FOREIGN KEY fk_exams_course;
 
             ALTER TABLE payments
-                DROP CONSTRAINT IF EXISTS fk_payments_package,
-                DROP CONSTRAINT IF EXISTS fk_payments_course;
+                DROP FOREIGN KEY fk_payments_package,
+                DROP FOREIGN KEY fk_payments_course;
 
             ALTER TABLE results
-                DROP CONSTRAINT IF EXISTS fk_results_course;
+                DROP FOREIGN KEY fk_results_course;
         ";
 
         $pdo->exec($sql);

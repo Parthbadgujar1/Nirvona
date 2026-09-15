@@ -24,15 +24,17 @@ class ActivityRepository extends BaseRepository
      */
     public function getRecent(int $limit = 20): array
     {
+        // `::text` casts on id were Postgres-only; every id is already
+        // CHAR(36) (text) under MySQL, so no cast is needed at all.
         return $this->select(
             "SELECT * FROM (
-                (SELECT s.id::text as id, s.fullName as actor, 'registered' as action,
+                (SELECT s.id as id, s.fullName as actor, 'registered' as action,
                         'as a new student' as target, 'student' as type, s.createdAt as at
                  FROM students s
                  ORDER BY s.createdAt DESC
                  LIMIT ?)
                 UNION ALL
-                (SELECT p.id::text as id, s.fullName as actor, 'purchased' as action,
+                (SELECT p.id as id, s.fullName as actor, 'purchased' as action,
                         COALESCE(pk.name, p.courseSlug, 'a package') as target,
                         'purchase' as type, p.createdAt as at
                  FROM payments p
@@ -42,7 +44,7 @@ class ActivityRepository extends BaseRepository
                  ORDER BY p.createdAt DESC
                  LIMIT ?)
                 UNION ALL
-                (SELECT r.id::text as id, s.fullName as actor, 'received a result for' as action,
+                (SELECT r.id as id, s.fullName as actor, 'received a result for' as action,
                         r.examName as target, 'result' as type, r.updatedAt as at
                  FROM results r
                  JOIN students s ON s.id = r.studentId
@@ -50,7 +52,7 @@ class ActivityRepository extends BaseRepository
                  ORDER BY r.updatedAt DESC
                  LIMIT ?)
                 UNION ALL
-                (SELECT ac.id::text as id, s.fullName as actor, 'was issued an admit card for' as action,
+                (SELECT ac.id as id, s.fullName as actor, 'was issued an admit card for' as action,
                         e.name as target, 'admit-card' as type, ac.generatedAt as at
                  FROM admit_cards ac
                  JOIN students s ON s.id = ac.studentId

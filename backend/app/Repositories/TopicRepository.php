@@ -50,7 +50,7 @@ class TopicRepository extends BaseRepository
     {
         $query = '%' . $query . '%';
         return $this->select(
-            "SELECT * FROM {$this->table} WHERE courseSlug = ? AND name ILIKE ? LIMIT 50",
+            "SELECT * FROM {$this->table} WHERE courseSlug = ? AND name LIKE ? LIMIT 50",
             [$courseSlug, $query]
         );
     }

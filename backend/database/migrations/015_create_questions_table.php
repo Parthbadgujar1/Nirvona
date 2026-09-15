@@ -10,8 +10,8 @@ return [
     'up' => function (\PDO $pdo) {
         $sql = "
             CREATE TABLE IF NOT EXISTS questions (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                examId UUID NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
+                id CHAR(36) PRIMARY KEY,
+                examId CHAR(36) NOT NULL,
                 qNo INT NOT NULL,
                 subject VARCHAR(100),
                 topic VARCHAR(255),
@@ -26,8 +26,9 @@ return [
                 difficulty VARCHAR(20) DEFAULT 'medium',
                 createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(examId, qNo)
-            );
+                UNIQUE(examId, qNo),
+                CONSTRAINT fk_questions_exam FOREIGN KEY (examId) REFERENCES exams(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
             CREATE INDEX idx_questions_examId ON questions(examId);
             CREATE INDEX idx_questions_subject ON questions(subject);
@@ -37,6 +38,6 @@ return [
     },
 
     'down' => function (\PDO $pdo) {
-        $pdo->exec("DROP TABLE IF EXISTS questions CASCADE;");
+        $pdo->exec("DROP TABLE IF EXISTS questions;");
     },
 ];

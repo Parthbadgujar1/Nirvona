@@ -11,23 +11,28 @@
  * later verify step has something real to check against.
  * `transactionId` (already on the table) continues to hold the
  * Razorpay payment id (`pay_...`), matching what it always meant.
+ *
+ * No "IF NOT EXISTS" - MySQL doesn't support that clause on
+ * ALTER TABLE ADD COLUMN or CREATE INDEX (MariaDB-only extensions).
+ * Safe regardless: the migration runner tracks applied migrations and
+ * never re-runs this file.
  */
 return [
     'up' => function (\PDO $pdo) {
         $pdo->exec("
             ALTER TABLE payments
-                ADD COLUMN IF NOT EXISTS razorpayOrderId VARCHAR(255),
-                ADD COLUMN IF NOT EXISTS razorpaySignature VARCHAR(500);
+                ADD COLUMN razorpayOrderId VARCHAR(255),
+                ADD COLUMN razorpaySignature VARCHAR(500);
 
-            CREATE INDEX IF NOT EXISTS idx_payments_razorpayOrderId ON payments(razorpayOrderId);
+            CREATE INDEX idx_payments_razorpayOrderId ON payments(razorpayOrderId);
         ");
     },
 
     'down' => function (\PDO $pdo) {
         $pdo->exec("
             ALTER TABLE payments
-                DROP COLUMN IF EXISTS razorpayOrderId,
-                DROP COLUMN IF EXISTS razorpaySignature;
+                DROP COLUMN razorpayOrderId,
+                DROP COLUMN razorpaySignature;
         ");
     },
 ];

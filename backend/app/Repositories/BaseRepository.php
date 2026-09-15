@@ -3,6 +3,7 @@
 namespace Nirvona\Repositories;
 
 use PDO;
+use Ramsey\Uuid\Uuid;
 
 /**
  * BaseRepository
@@ -53,28 +54,40 @@ abstract class BaseRepository
     /**
      * Create new record
      *
-     * Every table here uses a Postgres-generated UUID primary key
-     * (DEFAULT gen_random_uuid()), not a sequence - PDO::lastInsertId()
-     * only works for sequence-backed columns and throws
-     * "lastval is not yet defined in this session" for these tables.
-     * `RETURNING *` sidesteps that entirely: it hands back the actual
-     * inserted row (id and every other server-side default included)
-     * in the same round-trip, so there's no follow-up SELECT needed.
+     * Every table here uses a UUID primary key. Postgres used to
+     * generate it DB-side (DEFAULT gen_random_uuid()) and hand the
+     * whole inserted row back via `RETURNING *` in one round-trip -
+     * MySQL has neither: no portable function-default UUID (MySQL 8's
+     * UUID() default expression isn't available on older MariaDB, which
+     * shared hosts commonly run) and no RETURNING clause at all. So the
+     * id is generated here in PHP before the INSERT, and the row is
+     * re-read by that id afterward to pick up server-side defaults
+     * (status columns, createdAt/updatedAt) the same way `RETURNING *`
+     * used to.
      *
      * @param array $data
      * @return array Created record
      */
     public function create(array $data): array
     {
-        $columns = implode(', ', array_keys($data));
+        if (!isset($data['id'])) {
+            $data['id'] = Uuid::uuid4()->toString();
+        }
+
+        // Backtick every column name: `rank` (results, leaderboards) is
+        // a reserved word in MySQL 8.0.2+ (added for window functions)
+        // and errors as a bare identifier - quoting every column here,
+        // not just that one, means any future column name that happens
+        // to collide with a reserved word doesn't silently break here too.
+        $columns = implode(', ', array_map(fn($k) => "`{$k}`", array_keys($data)));
         $placeholders = implode(', ', array_fill(0, count($data), '?'));
 
         $stmt = $this->db->prepare(
-            "INSERT INTO {$this->table} ({$columns}) VALUES ({$placeholders}) RETURNING *"
+            "INSERT INTO {$this->table} ({$columns}) VALUES ({$placeholders})"
         );
         $stmt->execute(array_values($data));
 
-        return ColumnCase::normalize($stmt->fetch(PDO::FETCH_ASSOC));
+        return $this->getById($data['id']) ?? $data;
     }
 
     /**
@@ -90,7 +103,7 @@ abstract class BaseRepository
             return false;
         }
 
-        $set = implode(', ', array_map(fn($k) => "{$k} = ?", array_keys($data)));
+        $set = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($data)));
         $values = array_values($data);
         $values[] = $id;
 

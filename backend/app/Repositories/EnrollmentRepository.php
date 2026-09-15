@@ -116,12 +116,14 @@ class EnrollmentRepository extends BaseRepository
      */
     public function getMonthlyActivations(int $months = 6): array
     {
+        // DATE_FORMAT/DATE_SUB, not Postgres's TO_CHAR/`::INTERVAL` cast -
+        // neither exists in MySQL.
         return $this->select(
-            "SELECT TO_CHAR(createdAt, 'YYYY-MM') as ym,
+            "SELECT DATE_FORMAT(createdAt, '%Y-%m') as ym,
                     COUNT(*) as activations
              FROM {$this->table}
-             WHERE createdAt >= (CURRENT_DATE - (? || ' months')::INTERVAL)
-             GROUP BY TO_CHAR(createdAt, 'YYYY-MM')
+             WHERE createdAt >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
+             GROUP BY DATE_FORMAT(createdAt, '%Y-%m')
              ORDER BY ym ASC",
             [$months]
         );

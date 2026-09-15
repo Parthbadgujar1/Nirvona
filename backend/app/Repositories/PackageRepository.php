@@ -11,7 +11,7 @@ class PackageRepository extends BaseRepository
 {
     protected string $table = 'packages';
 
-    /** JSONB columns that need decoding after every read */
+    /** JSON columns that need decoding after every read */
     private const JSON_COLUMNS = ['features', 'benefits', 'includes'];
 
     /**
@@ -88,9 +88,18 @@ class PackageRepository extends BaseRepository
     private function decodeJsonColumns(array $row): array
     {
         foreach (self::JSON_COLUMNS as $column) {
-            if (isset($row[$column]) && is_string($row[$column])) {
-                $row[$column] = json_decode($row[$column], true) ?? ($column === 'includes' ? [] : []);
+            if (!array_key_exists($column, $row)) {
+                continue;
             }
+            // These columns are JSON NULL (no DB-side default - MySQL
+            // doesn't allow a literal default on a JSON column the way
+            // Postgres's JSONB did), so a row a caller created without
+            // setting one comes back NULL rather than "[]"/"{}"; treat
+            // that the same as an empty array here so every consumer
+            // still always gets a real array, never null.
+            $row[$column] = is_string($row[$column])
+                ? (json_decode($row[$column], true) ?? [])
+                : ($row[$column] ?? []);
         }
         return $row;
     }

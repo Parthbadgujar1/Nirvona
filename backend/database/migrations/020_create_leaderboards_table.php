@@ -11,18 +11,21 @@
  * StudentRepository::getLeaderboard() / ResultRepository::getLeaderboard()
  * can be pointed at this table once that job exists, instead of
  * aggregating live.
+ *
+ * `rank` is backtick-quoted (reserved word in MySQL 8.0.2+, same as
+ * results.rank).
  */
 return [
     'up' => function (\PDO $pdo) {
         $sql = "
             CREATE TABLE IF NOT EXISTS leaderboards (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                examId UUID REFERENCES exams(id) ON DELETE CASCADE,
-                courseSlug VARCHAR(50) REFERENCES courses(slug) ON DELETE CASCADE,
-                studentId UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+                id CHAR(36) PRIMARY KEY,
+                examId CHAR(36),
+                courseSlug VARCHAR(50),
+                studentId CHAR(36) NOT NULL,
                 studentName VARCHAR(255),
                 className VARCHAR(100),
-                rank INT NOT NULL,
+                `rank` INT NOT NULL,
                 score DECIMAL(10, 2),
                 percentage DECIMAL(5, 2),
                 avgPercentage DECIMAL(5, 2),
@@ -31,12 +34,15 @@ return [
                 period VARCHAR(20) DEFAULT 'exam',
                 generatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
+                updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_leaderboards_exam FOREIGN KEY (examId) REFERENCES exams(id) ON DELETE CASCADE,
+                CONSTRAINT fk_leaderboards_course FOREIGN KEY (courseSlug) REFERENCES courses(slug) ON DELETE CASCADE,
+                CONSTRAINT fk_leaderboards_student FOREIGN KEY (studentId) REFERENCES students(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
             CREATE INDEX idx_leaderboards_examId ON leaderboards(examId);
             CREATE INDEX idx_leaderboards_courseSlug ON leaderboards(courseSlug);
-            CREATE INDEX idx_leaderboards_rank ON leaderboards(rank);
+            CREATE INDEX idx_leaderboards_rank ON leaderboards(`rank`);
             CREATE INDEX idx_leaderboards_period ON leaderboards(period);
         ";
 
@@ -44,6 +50,6 @@ return [
     },
 
     'down' => function (\PDO $pdo) {
-        $pdo->exec("DROP TABLE IF EXISTS leaderboards CASCADE;");
+        $pdo->exec("DROP TABLE IF EXISTS leaderboards;");
     },
 ];

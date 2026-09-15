@@ -161,7 +161,7 @@ class StudentRepository extends BaseRepository
     {
         return $this->select(
             "SELECT s.id, s.fullName, s.className, AVG(r.percentage) as avgPercentage,
-                    COUNT(r.id) as totalExams, MAX(r.rank) as bestRank
+                    COUNT(r.id) as totalExams, MAX(r.`rank`) as bestRank
              FROM {$this->table} s
              LEFT JOIN results r ON s.id = r.studentId
              WHERE r.courseSlug = ? AND s.status = 'active'
@@ -182,12 +182,14 @@ class StudentRepository extends BaseRepository
      */
     public function getMonthlyRegistrations(int $months = 6): array
     {
+        // DATE_FORMAT/DATE_SUB, not Postgres's TO_CHAR/`::INTERVAL` cast -
+        // neither exists in MySQL.
         return $this->select(
-            "SELECT TO_CHAR(enrolledAt, 'YYYY-MM') as ym,
+            "SELECT DATE_FORMAT(enrolledAt, '%Y-%m') as ym,
                     COUNT(*) as registrations
              FROM {$this->table}
-             WHERE enrolledAt >= (CURRENT_DATE - (? || ' months')::INTERVAL)
-             GROUP BY TO_CHAR(enrolledAt, 'YYYY-MM')
+             WHERE enrolledAt >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
+             GROUP BY DATE_FORMAT(enrolledAt, '%Y-%m')
              ORDER BY ym ASC",
             [$months]
         );
@@ -202,9 +204,13 @@ class StudentRepository extends BaseRepository
     public function search(string $query): array
     {
         $query = '%' . $query . '%';
+        // Plain LIKE, not case-sensitive here (was ILIKE under Postgres) -
+        // every text column is utf8mb4_unicode_ci, MySQL's default
+        // case-insensitive collation, so LIKE already matches regardless
+        // of case.
         return $this->stripPasswordHashes($this->select(
             "SELECT * FROM {$this->table}
-             WHERE (fullName ILIKE ? OR email ILIKE ?)
+             WHERE (fullName LIKE ? OR email LIKE ?)
              AND status = 'active'
              LIMIT 50",
             [$query, $query]

@@ -9,8 +9,8 @@ return [
     'up' => function (\PDO $pdo) {
         $sql = "
             CREATE TABLE IF NOT EXISTS packages (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                courseSlug VARCHAR(50) NOT NULL REFERENCES courses(slug) ON DELETE CASCADE,
+                id CHAR(36) PRIMARY KEY,
+                courseSlug VARCHAR(50) NOT NULL,
                 name VARCHAR(255) NOT NULL,
                 duration VARCHAR(10) NOT NULL,
                 durationLabel VARCHAR(50),
@@ -21,13 +21,14 @@ return [
                 tests INT DEFAULT 0,
                 recommended BOOLEAN DEFAULT FALSE,
                 tagline VARCHAR(500),
-                features JSONB NOT NULL DEFAULT '[]',
-                benefits JSONB NOT NULL DEFAULT '[]',
-                includes JSONB NOT NULL DEFAULT '{}',
+                features JSON NULL,
+                benefits JSON NULL,
+                includes JSON NULL,
                 status VARCHAR(20) DEFAULT 'active',
                 createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
+                updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_packages_course FOREIGN KEY (courseSlug) REFERENCES courses(slug) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
             CREATE INDEX idx_packages_courseSlug ON packages(courseSlug);
             CREATE INDEX idx_packages_status ON packages(status);
@@ -37,6 +38,6 @@ return [
     },
 
     'down' => function (\PDO $pdo) {
-        $pdo->exec("DROP TABLE IF EXISTS packages CASCADE;");
+        $pdo->exec("DROP TABLE IF EXISTS packages;");
     },
 ];

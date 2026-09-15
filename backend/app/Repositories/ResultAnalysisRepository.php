@@ -66,9 +66,15 @@ class ResultAnalysisRepository extends BaseRepository
     private function decodeJsonColumns(array $row): array
     {
         foreach (self::JSON_COLUMNS as $column) {
-            if (isset($row[$column]) && is_string($row[$column])) {
-                $row[$column] = json_decode($row[$column], true) ?? [];
+            if (!array_key_exists($column, $row)) {
+                continue;
             }
+            // JSON NULL, no DB-side default (MySQL disallows one) - a
+            // row created without this field comes back NULL rather
+            // than "[]"; normalize to an empty array either way.
+            $row[$column] = is_string($row[$column])
+                ? (json_decode($row[$column], true) ?? [])
+                : ($row[$column] ?? []);
         }
         return $row;
     }
