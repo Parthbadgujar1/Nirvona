@@ -3,7 +3,8 @@
 import * as React from "react";
 import { motion } from "framer-motion";
 import {
-  CheckCircle2, Download, FileSpreadsheet, Filter, ShoppingCart, TrendingUp, Wallet,
+  CheckCircle2, Download, FileSpreadsheet, Filter, MoreHorizontal, RotateCcw, ShoppingCart,
+  TrendingUp, Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -13,11 +14,15 @@ import { Alert } from "@/components/ui/alert";
 import {
   Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Dropdown, DropdownContent, DropdownItem, DropdownLabel, DropdownSeparator, DropdownTrigger,
+} from "@/components/ui/dropdown";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { FilterBar, Pagination } from "@/components/shared/filters";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/states";
 import { useAsync } from "@/hooks/use-async";
 import { adminService } from "@/services/admin.service";
@@ -48,6 +53,7 @@ export function PurchasesManager() {
   const [page, setPage] = React.useState(1);
   const [exportOpen, setExportOpen] = React.useState(false);
   const [exporting, setExporting] = React.useState(false);
+  const [refundTarget, setRefundTarget] = React.useState<Payment | null>(null);
 
   if (payments.status === "error") return <ErrorState onRetry={payments.reload} />;
   if (payments.status === "loading" || !payments.data) {
@@ -72,6 +78,17 @@ export function PurchasesManager() {
   const successful = all.filter((p) => p.status === "successful");
   const revenue = successful.reduce((sum, p) => sum + p.total, 0);
   const exportable = filtered.filter((p) => p.status === "successful");
+
+  async function confirmRefund() {
+    if (!refundTarget) return;
+    try {
+      await adminService.refundPayment(refundTarget.id);
+      payments.reload();
+      toast.success(`${formatCurrency(refundTarget.total)} refunded for ${refundTarget.studentName}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not refund this payment.");
+    }
+  }
 
   const columns: Column<Payment>[] = [
     {
@@ -135,6 +152,30 @@ export function PurchasesManager() {
       header: "Status",
       sortValue: (row) => row.status,
       cell: (row) => <StatusBadge kind="payment" status={row.status} size="sm" />,
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      hideOnCard: true,
+      cell: (row) =>
+        row.status === "successful" ? (
+          <Dropdown>
+            <DropdownTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${row.id}`}>
+                <MoreHorizontal />
+              </Button>
+            </DropdownTrigger>
+            <DropdownContent>
+              <DropdownLabel>{row.id}</DropdownLabel>
+              <DropdownSeparator />
+              <DropdownItem destructive onSelect={() => setRefundTarget(row)}>
+                <RotateCcw />
+                Mark as refunded
+              </DropdownItem>
+            </DropdownContent>
+          </Dropdown>
+        ) : null,
     },
   ];
 
@@ -401,6 +442,26 @@ export function PurchasesManager() {
           against the gateway dashboard before being marked failed.
         </p>
       </Card>
+
+      <ConfirmDialog
+        open={Boolean(refundTarget)}
+        onOpenChange={(open) => !open && setRefundTarget(null)}
+        title={`Refund ${refundTarget?.studentName}'s order?`}
+        description="This marks the order as refunded in Nirvona. It does not itself move money — issue the actual refund through Razorpay's dashboard first, then record it here."
+        confirmLabel="Mark as refunded"
+        tone="danger"
+        details={
+          refundTarget && (
+            <div className="rounded-xl border border-ink-200 bg-canvas p-4 text-sm">
+              <p className="font-semibold text-navy-900">{refundTarget.packageName}</p>
+              <p className="mt-1 text-ink-500">
+                {refundTarget.transactionId} · {formatCurrency(refundTarget.total)}
+              </p>
+            </div>
+          )
+        }
+        onConfirm={confirmRefund}
+      />
     </div>
   );
 }

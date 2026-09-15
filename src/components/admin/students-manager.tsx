@@ -4,12 +4,13 @@ import * as React from "react";
 import { Link } from "react-router-dom";
 import {
   CalendarClock, CreditCard, Download, Eye, GraduationCap, IdCard, KeyRound, MoreHorizontal,
-  Pencil, Users, UserCheck,
+  Pencil, UserCheck, UserX, Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
+import { Field, Input } from "@/components/ui/input";
 import {
   Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -21,6 +22,7 @@ import { StatCard } from "@/components/shared/stat-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { FilterBar, Pagination } from "@/components/shared/filters";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/states";
 import { useAsync } from "@/hooks/use-async";
 import { adminService, adminData } from "@/services/admin.service";
@@ -31,6 +33,18 @@ import { exportRows, timestampedName } from "@/lib/export";
 import type { Student } from "@/types";
 
 const PAGE_SIZE = 10;
+
+const EDIT_FIELDS: { key: keyof Student; label: string }[] = [
+  { key: "fullName", label: "Full name" },
+  { key: "email", label: "Email" },
+  { key: "mobile", label: "Mobile" },
+  { key: "className", label: "Class" },
+  { key: "school", label: "School" },
+  { key: "city", label: "City" },
+  { key: "state", label: "State" },
+  { key: "guardianName", label: "Guardian name" },
+  { key: "guardianMobile", label: "Guardian mobile" },
+];
 
 export function StudentsManager() {
   const students = useAsync(() => adminService.students(), []);
@@ -53,10 +67,61 @@ export function StudentsManager() {
   const [page, setPage] = React.useState(1);
   const [selected, setSelected] = React.useState<string[]>([]);
   const [detail, setDetail] = React.useState<Student | null>(null);
+  const [editing, setEditing] = React.useState<Student | null>(null);
+  const [draft, setDraft] = React.useState<Record<string, string>>({});
+  const [saving, setSaving] = React.useState(false);
+  const [statusTarget, setStatusTarget] = React.useState<Student | null>(null);
 
   if (students.status === "error") return <ErrorState onRetry={students.reload} />;
   if (students.status === "loading" || !students.data) {
     return <LoadingState label="Loading student records" />;
+  }
+
+  function openEdit(student: Student) {
+    setEditing(student);
+    setDraft({
+      fullName: student.fullName,
+      email: student.email,
+      mobile: student.mobile,
+      className: student.className,
+      school: student.school ?? "",
+      city: student.city,
+      state: student.state,
+      guardianName: student.guardianName ?? "",
+      guardianMobile: student.guardianMobile ?? "",
+    });
+  }
+
+  async function saveEdit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!editing) return;
+    setSaving(true);
+    try {
+      await adminService.updateStudent(editing.id, draft);
+      students.reload();
+      setEditing(null);
+      toast.success("Student updated");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update this student.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function confirmStatusChange() {
+    if (!statusTarget) return;
+    try {
+      if (statusTarget.status === "active") {
+        await adminService.deactivateStudent(statusTarget.id);
+        toast.success(`${statusTarget.fullName} deactivated`);
+      } else {
+        await adminService.reactivateStudent(statusTarget.id);
+        toast.success(`${statusTarget.fullName} reactivated`);
+      }
+      students.reload();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update this student's status.");
+    }
   }
 
   const paymentFor = (id: string) => payments.data?.find((p) => p.studentId === id);
@@ -198,7 +263,7 @@ export function StudentsManager() {
               <Eye />
               View student
             </DropdownItem>
-            <DropdownItem onSelect={() => toast.info("Edit form would open here")}>
+            <DropdownItem onSelect={() => openEdit(row)}>
               <Pencil />
               Edit details
             </DropdownItem>
@@ -220,6 +285,18 @@ export function StudentsManager() {
                 Exam credentials
               </Link>
             </DropdownItem>
+            <DropdownSeparator />
+            {row.status === "active" ? (
+              <DropdownItem destructive onSelect={() => setStatusTarget(row)}>
+                <UserX />
+                Deactivate student
+              </DropdownItem>
+            ) : (
+              <DropdownItem onSelect={() => setStatusTarget(row)}>
+                <UserCheck />
+                Reactivate student
+              </DropdownItem>
+            )}
           </DropdownContent>
         </Dropdown>
       ),
@@ -439,6 +516,56 @@ export function StudentsManager() {
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
+        <DialogContent size="lg">
+          {editing && (
+            <form onSubmit={saveEdit}>
+              <DialogHeader>
+                <DialogTitle>Edit {editing.fullName}</DialogTitle>
+                <DialogDescription>Changes apply immediately.</DialogDescription>
+              </DialogHeader>
+              <DialogBody className="grid gap-4 sm:grid-cols-2">
+                {EDIT_FIELDS.map((field) => (
+                  <Field key={field.key} label={field.label} htmlFor={`s-${field.key}`}>
+                    <Input
+                      id={`s-${field.key}`}
+                      value={draft[field.key] ?? ""}
+                      onChange={(e) => setDraft((d) => ({ ...d, [field.key]: e.target.value }))}
+                    />
+                  </Field>
+                ))}
+              </DialogBody>
+              <DialogFooter>
+                <Button type="button" variant="secondary" onClick={() => setEditing(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit" loading={saving}>
+                  Save changes
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(statusTarget)}
+        onOpenChange={(open) => !open && setStatusTarget(null)}
+        title={
+          statusTarget?.status === "active"
+            ? `Deactivate ${statusTarget.fullName}?`
+            : `Reactivate ${statusTarget?.fullName}?`
+        }
+        description={
+          statusTarget?.status === "active"
+            ? "The student loses access to their dashboard and drops off active rosters and leaderboards. Their payment, enrollment and result history is kept."
+            : "The student regains access to their dashboard and reappears on active rosters and leaderboards."
+        }
+        confirmLabel={statusTarget?.status === "active" ? "Deactivate" : "Reactivate"}
+        tone={statusTarget?.status === "active" ? "danger" : "default"}
+        onConfirm={confirmStatusChange}
+      />
     </div>
   );
 }

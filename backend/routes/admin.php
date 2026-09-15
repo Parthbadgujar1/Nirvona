@@ -58,9 +58,13 @@ return function (App $app) {
 
         // Student Management
         $group->get('/students', [AdminController::class, 'listStudents']);
+        $group->put('/students/{id}', [AdminController::class, 'updateStudent']);
+        $group->post('/students/{id}/deactivate', [AdminController::class, 'deactivateStudent']);
+        $group->post('/students/{id}/reactivate', [AdminController::class, 'reactivateStudent']);
 
         // Payment Management
         $group->get('/payments', [AdminController::class, 'listPayments']);
+        $group->post('/payments/{id}/refund', [AdminController::class, 'refundPayment']);
 
         // Enrollment Management
         $group->get('/enrollments', [EnrollmentController::class, 'listAll']);

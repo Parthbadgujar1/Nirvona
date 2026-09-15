@@ -29,7 +29,7 @@ import {
   SCORE_DISTRIBUTION,
 } from "@/data/results";
 import type {
-  AnswerKey, AnswerKeyEntry, AppNotification, Course, Exam, ExamCentre, Package,
+  AnswerKey, AnswerKeyEntry, AppNotification, Course, Exam, ExamCentre, Package, Payment, Student,
   UploadValidationResult,
 } from "@/types";
 import { resolve, post, put, del } from "./http";
@@ -61,8 +61,13 @@ export const adminService = {
     ),
 
   // Students & Enrollments
-  students: () => resolve(STUDENTS, "/admin/students"),
-  payments: () => resolve(PAYMENTS, "/admin/payments"),
+  students: (): Promise<Student[]> => resolve(STUDENTS, "/admin/students"),
+  updateStudent: (id: string, payload: Record<string, unknown>): Promise<Student> =>
+    put(`/admin/students/${id}`, payload),
+  deactivateStudent: (id: string): Promise<void> => post(`/admin/students/${id}/deactivate`, {}),
+  reactivateStudent: (id: string): Promise<void> => post(`/admin/students/${id}/reactivate`, {}),
+  payments: (): Promise<Payment[]> => resolve(PAYMENTS, "/admin/payments"),
+  refundPayment: (id: string): Promise<Payment> => post(`/admin/payments/${id}/refund`, {}),
   enrollments: () => resolve(ENROLLMENTS, "/admin/enrollments"),
 
   // Catalogue: Courses & Packages

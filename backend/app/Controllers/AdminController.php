@@ -49,6 +49,40 @@ class AdminController
     }
 
     /**
+     * PUT /api/admin/students/{id}
+     */
+    public function updateStudent(Request $request, Response $response, array $args): Response
+    {
+        $data = json_decode($request->getBody(), true) ?? [];
+        $result = $this->adminService->updateStudent($args['id'], $data);
+        $statusCode = $result['success'] ? 200 : 400;
+        $response->getBody()->write(json_encode($result));
+        return $response->withStatus($statusCode)->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
+     * POST /api/admin/students/{id}/deactivate
+     */
+    public function deactivateStudent(Request $request, Response $response, array $args): Response
+    {
+        $result = $this->adminService->deactivateStudent($args['id']);
+        $statusCode = $result['success'] ? 200 : 400;
+        $response->getBody()->write(json_encode($result));
+        return $response->withStatus($statusCode)->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
+     * POST /api/admin/students/{id}/reactivate
+     */
+    public function reactivateStudent(Request $request, Response $response, array $args): Response
+    {
+        $result = $this->adminService->reactivateStudent($args['id']);
+        $statusCode = $result['success'] ? 200 : 400;
+        $response->getBody()->write(json_encode($result));
+        return $response->withStatus($statusCode)->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
      * GET /api/admin/payments
      */
     public function listPayments(Request $request, Response $response): Response
@@ -57,6 +91,17 @@ class AdminController
         $result = $this->adminService->listPayments($page, $pageSize);
         $response->getBody()->write(json_encode($result));
         return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
+     * POST /api/admin/payments/{id}/refund
+     */
+    public function refundPayment(Request $request, Response $response, array $args): Response
+    {
+        $result = $this->adminService->refundPayment($args['id']);
+        $statusCode = $result['success'] ? 200 : 400;
+        $response->getBody()->write(json_encode($result));
+        return $response->withStatus($statusCode)->withHeader('Content-Type', 'application/json');
     }
 
     /**

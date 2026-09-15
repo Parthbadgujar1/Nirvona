@@ -9,6 +9,7 @@ use Nirvona\Repositories\ResultRepository;
 use Nirvona\Repositories\EnrollmentRepository;
 use Nirvona\Repositories\ExamCandidateRepository;
 use Nirvona\Repositories\ActivityRepository;
+use Nirvona\Exceptions\ServiceException;
 
 /**
  * AdminService
@@ -310,6 +311,143 @@ class AdminService extends BaseService
             fn() => ['success' => true, 'data' => $this->activityRepository->getRecent($limit)],
             ['success' => true, 'data' => []],
             'getActivity'
+        );
+    }
+
+    /**
+     * Mark a successful payment as refunded
+     *
+     * This only updates the payment record's own status - it does not
+     * touch the student's enrollment/access, which is a separate manual
+     * step (revoking access on refund is a real product decision that
+     * shouldn't happen silently as a side effect of a status change).
+     * Actually issuing the refund through Razorpay happens outside this
+     * app; this records that it happened.
+     *
+     * @param string $id
+     * @return array
+     */
+    public function refundPayment(string $id): array
+    {
+        return $this->executeWithFallback(
+            function () use ($id) {
+                $payment = $this->paymentRepository->getById($id);
+                if (!$payment) {
+                    throw new ServiceException("Payment not found: {$id}", 'AdminService', false);
+                }
+
+                if ($payment['status'] !== 'successful') {
+                    throw new ServiceException(
+                        "Only a successful payment can be refunded (current status: {$payment['status']})",
+                        'AdminService',
+                        false
+                    );
+                }
+
+                $this->paymentRepository->update($id, ['status' => 'refunded']);
+                $this->auditLog('REFUND', 'Payment', $id, ['amount' => $payment['total']]);
+
+                return [
+                    'success' => true,
+                    'data' => $this->paymentRepository->getById($id),
+                    'message' => 'Payment marked as refunded',
+                ];
+            },
+            null,
+            'refundPayment'
+        );
+    }
+
+    /**
+     * Update a student's profile (admin-side)
+     *
+     * @param string $id
+     * @param array $data
+     * @return array
+     */
+    public function updateStudent(string $id, array $data): array
+    {
+        return $this->executeWithFallback(
+            function () use ($id, $data) {
+                if (!$this->studentRepository->getById($id)) {
+                    throw new ServiceException("Student not found: {$id}", 'AdminService', false);
+                }
+
+                // Password changes go through a dedicated reset flow
+                // (hashing, current-password checks) - never accept a raw
+                // passwordHash/password field from a generic profile-edit
+                // payload, admin or not.
+                unset($data['passwordHash'], $data['password']);
+
+                $this->studentRepository->update($id, $data);
+                $this->auditLog('UPDATE', 'Student', $id, ['fields' => array_keys($data)]);
+
+                return [
+                    'success' => true,
+                    'data' => $this->studentRepository->getById($id),
+                    'message' => 'Student updated successfully',
+                ];
+            },
+            null,
+            'updateStudent'
+        );
+    }
+
+    /**
+     * Deactivate a student (soft delete)
+     *
+     * Not a hard DELETE: payments.studentId and results.studentId have no
+     * ON DELETE clause (defaults to RESTRICT), so any student with a
+     * single payment or result - i.e. almost every real, paying student -
+     * would throw a raw foreign key violation. Meanwhile enrollments/
+     * exam_candidates/student_responses ARE ON DELETE CASCADE, so a hard
+     * delete would silently wipe those for anyone it didn't outright fail
+     * on. Deactivating preserves every record and simply removes the
+     * student from active rosters/leaderboards (which already filter on
+     * status = 'active').
+     *
+     * @param string $id
+     * @return array
+     */
+    public function deactivateStudent(string $id): array
+    {
+        return $this->executeWithFallback(
+            function () use ($id) {
+                if (!$this->studentRepository->getById($id)) {
+                    throw new ServiceException("Student not found: {$id}", 'AdminService', false);
+                }
+
+                $this->studentRepository->update($id, ['status' => 'inactive']);
+                $this->auditLog('DEACTIVATE', 'Student', $id, []);
+
+                return ['success' => true, 'message' => 'Student deactivated successfully'];
+            },
+            null,
+            'deactivateStudent'
+        );
+    }
+
+    /**
+     * Reactivate a previously deactivated student
+     *
+     * @param string $id
+     * @return array
+     */
+    public function reactivateStudent(string $id): array
+    {
+        return $this->executeWithFallback(
+            function () use ($id) {
+                if (!$this->studentRepository->getById($id)) {
+                    throw new ServiceException("Student not found: {$id}", 'AdminService', false);
+                }
+
+                $this->studentRepository->update($id, ['status' => 'active']);
+                $this->auditLog('REACTIVATE', 'Student', $id, []);
+
+                return ['success' => true, 'message' => 'Student reactivated successfully'];
+            },
+            null,
+            'reactivateStudent'
         );
     }
 
