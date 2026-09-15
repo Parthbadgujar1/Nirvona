@@ -13,27 +13,15 @@ import { Switch } from "@/components/ui/checkbox";
 import { Avatar } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/shared/page-header";
-import { CURRENT_ADMIN } from "@/data/students";
-
-const TEAM = [
-  { name: "Nikhil Raghavan", email: "nikhil.raghavan@nirvona.edu.in", role: "Super admin", scope: "Full access" },
-  { name: "Priya Menon", email: "priya.menon@nirvona.edu.in", role: "Exam manager", scope: "Exams, credentials, results" },
-  { name: "Vikas Bhatt", email: "vikas.bhatt@nirvona.edu.in", role: "Exam manager", scope: "Exams, admit cards, centres" },
-  { name: "Sneha Kulkarni", email: "sneha.kulkarni@nirvona.edu.in", role: "Support", scope: "Students, payments (read-only)" },
-];
-
-const PERMISSIONS = [
-  { area: "Students", superAdmin: "Full", examManager: "Read", support: "Read" },
-  { area: "Purchases & payments", superAdmin: "Full", examManager: "Read", support: "Read" },
-  { area: "Exams & centres", superAdmin: "Full", examManager: "Full", support: "None" },
-  { area: "Exam credentials", superAdmin: "Full", examManager: "Full", support: "None" },
-  { area: "Admit cards", superAdmin: "Full", examManager: "Full", support: "Read" },
-  { area: "Answer keys & results", superAdmin: "Full", examManager: "Full", support: "None" },
-  { area: "Reports & exports", superAdmin: "Full", examManager: "Read", support: "Read" },
-  { area: "Settings & roles", superAdmin: "Full", examManager: "None", support: "None" },
-];
+import { useSession } from "@/hooks/use-session";
 
 export function SettingsView() {
+  // There is exactly one admin account - no super-admin/exam-manager/
+  // support sub-roles and no second admin to invite (see
+  // AdminMiddleware, which only ever gates on "admin" vs "student").
+  // The profile card shows the real signed-in admin instead of a
+  // fabricated one.
+  const { session } = useSession("admin");
   const [saving, setSaving] = React.useState(false);
   const [prefs, setPrefs] = React.useState({
     twoFactor: true,
@@ -54,21 +42,23 @@ export function SettingsView() {
     <div className="space-y-6">
       <PageHeader
         title="Settings"
-        description="Organisation profile, examination defaults, team roles and security controls."
+        description="Organisation profile, examination defaults, administrator account and security controls."
       />
 
       <Card className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center">
-        <Avatar name={CURRENT_ADMIN.name} size="lg" />
+        <Avatar name={session?.name ?? "Admin"} size="lg" />
         <div className="min-w-0 flex-1">
-          <h2 className="font-display text-xl font-bold text-navy-900">{CURRENT_ADMIN.name}</h2>
-          <p className="mt-0.5 text-sm text-ink-500">{CURRENT_ADMIN.email}</p>
+          <h2 className="font-display text-xl font-bold text-navy-900">{session?.name ?? "—"}</h2>
+          <p className="mt-0.5 text-sm text-ink-500">{session?.email ?? "—"}</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Badge tone="navy" size="sm">
-              {CURRENT_ADMIN.id}
-            </Badge>
+            {session?.id && (
+              <Badge tone="navy" size="sm">
+                {session.id}
+              </Badge>
+            )}
             <Badge tone="ember" size="sm">
               <Shield aria-hidden />
-              Super admin
+              Administrator
             </Badge>
           </div>
         </div>
@@ -78,7 +68,7 @@ export function SettingsView() {
         <TabsList variant="underline">
           <TabsTrigger variant="underline" value="organisation">Organisation</TabsTrigger>
           <TabsTrigger variant="underline" value="exams">Examination defaults</TabsTrigger>
-          <TabsTrigger variant="underline" value="team">Team & roles</TabsTrigger>
+          <TabsTrigger variant="underline" value="team">Administrator</TabsTrigger>
           <TabsTrigger variant="underline" value="security">Security</TabsTrigger>
         </TabsList>
 
@@ -202,80 +192,30 @@ export function SettingsView() {
 
         <TabsContent value="team">
           <div className="space-y-5">
-            <Card className="overflow-hidden">
-              <div className="flex items-center justify-between gap-3 border-b border-ink-100 p-5">
-                <div className="flex items-center gap-2.5">
-                  <Users className="size-4 text-ember-600" aria-hidden />
-                  <h3 className="font-display text-base font-semibold text-navy-900">
-                    Administrators
-                  </h3>
-                </div>
-                <Button variant="secondary" size="sm" onClick={() => toast.info("Invite flow would open here")}>
-                  Invite admin
-                </Button>
-              </div>
-              <ul className="divide-y divide-ink-100">
-                {TEAM.map((member) => (
-                  <li key={member.email} className="flex flex-wrap items-center gap-4 p-4">
-                    <Avatar name={member.name} size="sm" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-navy-900">{member.name}</p>
-                      <p className="truncate text-xs text-ink-500">{member.email}</p>
-                    </div>
-                    <Badge tone={member.role === "Super admin" ? "ember" : "neutral"} size="sm">
-                      {member.role}
-                    </Badge>
-                    <span className="w-full text-xs text-ink-500 sm:w-56">{member.scope}</span>
-                  </li>
-                ))}
-              </ul>
-            </Card>
+            <Alert tone="info" title="Single administrator account">
+              Nirvona has one unified admin account with complete authority over the entire
+              administration system — there are no separate super-admin, exam-manager or support
+              roles, and no additional admins to invite.
+            </Alert>
 
             <Card className="overflow-hidden">
-              <div className="border-b border-ink-100 p-5">
+              <div className="flex items-center gap-2.5 border-b border-ink-100 p-5">
+                <Users className="size-4 text-ember-600" aria-hidden />
                 <h3 className="font-display text-base font-semibold text-navy-900">
-                  Role permissions
+                  Administrator
                 </h3>
-                <p className="mt-1 text-xs text-ink-500">
-                  Role-based access is enforced on the server; this table documents the intended
-                  matrix.
-                </p>
               </div>
-              <div className="nv-scroll overflow-x-auto">
-                <table className="w-full min-w-max text-sm">
-                  <thead>
-                    <tr className="border-b border-ink-100 bg-ink-50/70 text-left">
-                      {["Area", "Super admin", "Exam manager", "Support"].map((h) => (
-                        <th
-                          key={h}
-                          scope="col"
-                          className="whitespace-nowrap px-5 py-3 text-2xs font-bold uppercase tracking-wider text-ink-500"
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-ink-100">
-                    {PERMISSIONS.map((row) => (
-                      <tr key={row.area}>
-                        <th scope="row" className="px-5 py-3.5 text-left font-medium text-navy-900">
-                          {row.area}
-                        </th>
-                        {[row.superAdmin, row.examManager, row.support].map((value, index) => (
-                          <td key={index} className="px-5 py-3.5">
-                            <Badge
-                              tone={value === "Full" ? "success" : value === "Read" ? "royal" : "neutral"}
-                              size="sm"
-                            >
-                              {value}
-                            </Badge>
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="flex flex-wrap items-center gap-4 p-4">
+                <Avatar name={session?.name ?? "Admin"} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-navy-900">
+                    {session?.name ?? "—"}
+                  </p>
+                  <p className="truncate text-xs text-ink-500">{session?.email ?? "—"}</p>
+                </div>
+                <Badge tone="ember" size="sm">
+                  Full access
+                </Badge>
               </div>
             </Card>
           </div>

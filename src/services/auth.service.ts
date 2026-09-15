@@ -33,7 +33,6 @@ interface LoginEnvelope {
     fullName?: string;
     name?: string;
     email: string;
-    adminRole?: string;
   };
   token: string;
   message?: string;

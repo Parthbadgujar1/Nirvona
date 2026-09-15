@@ -14,19 +14,8 @@ class Admin extends BaseModel
     public ?string $name = null;
     public ?string $email = null;
     public ?string $passwordHash = null;
-    public ?string $role = 'support';
     public ?string $avatarUrl = null;
     public ?string $status = 'active';
-
-    /**
-     * Check if admin has super-admin privileges
-     *
-     * @return bool
-     */
-    public function isSuperAdmin(): bool
-    {
-        return $this->role === 'super-admin';
-    }
 
     /**
      * Array representation with the password hash stripped

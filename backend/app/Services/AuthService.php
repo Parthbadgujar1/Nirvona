@@ -96,9 +96,12 @@ class AuthService extends BaseService
                     throw new ServiceException("Account is not active", 'AuthService', false);
                 }
 
+                // There is exactly one admin account type - no
+                // super-admin/exam-manager/support sub-roles to embed
+                // here. The `role` claim above ("admin" vs "student")
+                // is the real, enforced gate (see AdminMiddleware).
                 $token = $this->jwtService->issue($admin['id'], 'admin', [
                     'email' => $admin['email'],
-                    'adminRole' => $admin['role'],
                 ]);
 
                 $this->auditLog('LOGIN', 'Admin', $admin['id'], []);

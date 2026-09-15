@@ -47,7 +47,6 @@ class AdminMiddleware implements MiddlewareInterface
         $request = $request
             ->withAttribute('userId', $claims['sub'] ?? null)
             ->withAttribute('role', $claims['role'] ?? null)
-            ->withAttribute('adminRole', $claims['adminRole'] ?? null)
             ->withAttribute('claims', $claims);
 
         return $handler->handle($request);

@@ -77,9 +77,10 @@ export function getStudent(id: string) {
   return STUDENTS.find((s) => s.id === id);
 }
 
+// Mock-mode-only fallback session (see use-session.ts DEMO_ADMIN) - the
+// single admin account model has no sub-roles to carry here.
 export const CURRENT_ADMIN = {
   id: "ADM-001",
   name: "Nikhil Raghavan",
   email: "nikhil.raghavan@nirvona.edu.in",
-  role: "super-admin" as const,
 };

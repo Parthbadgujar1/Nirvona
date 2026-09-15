@@ -15,7 +15,7 @@ class AdminRepository extends BaseRepository
     protected string $table = 'admins';
 
     /** Columns safe to expose to a client (no passwordHash) */
-    private const PUBLIC_COLUMNS = 'id, name, email, role, avatarUrl, status, createdAt, updatedAt';
+    private const PUBLIC_COLUMNS = 'id, name, email, avatarUrl, status, createdAt, updatedAt';
 
     /**
      * Get by ID with the password hash stripped, same discipline as
@@ -82,7 +82,7 @@ class AdminRepository extends BaseRepository
     /**
      * Create an admin, hashing the plaintext password before storage
      *
-     * @param array $data name, email, role, avatarUrl?
+     * @param array $data name, email, avatarUrl?
      * @param string $plainPassword
      * @return array Created row (password hash excluded)
      */

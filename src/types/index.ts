@@ -31,11 +31,13 @@ export interface Student {
   address?: string;
 }
 
+// There is exactly one admin account type - no super-admin/exam-manager/
+// support sub-roles (see AdminMiddleware, which only ever gates on the
+// JWT's "admin" vs "student" role claim, never a per-admin sub-role).
 export interface Admin {
   id: ID;
   name: string;
   email: string;
-  role: "super-admin" | "exam-manager" | "support";
   avatarUrl?: string;
 }
 
