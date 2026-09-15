@@ -4,9 +4,13 @@ import { Button } from "@/components/ui/button";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { StaggerGroup, StaggerItem } from "@/components/shared/states";
 import { CourseCard } from "./course-card";
-import { COURSES } from "@/data/courses";
+import { catalogueService } from "@/services/catalogue.service";
+import { useAsync } from "@/hooks/use-async";
 
 export function ProgramsSection() {
+  const coursesAsync = useAsync(() => catalogueService.listCourses(), []);
+  const COURSES = coursesAsync.data ?? [];
+
   return (
     <section className="section-pad bg-white">
       <div className="container-nv">

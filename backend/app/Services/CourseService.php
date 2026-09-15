@@ -35,7 +35,18 @@ class CourseService extends BaseService
     public function listCourses(): array
     {
         return $this->executeWithFallback(
-            fn() => ['success' => true, 'data' => $this->courseRepository->getActive()],
+            function () {
+                // Public course cards show a subject count/list (see
+                // CourseCard, the /courses comparison table) - subjects
+                // live in a separate table, so a plain SELECT * on courses
+                // misses them entirely without this, same as the admin
+                // listing (listAllForAdmin()) needed.
+                $courses = $this->courseRepository->getActive();
+                foreach ($courses as &$course) {
+                    $course['subjects'] = $this->courseRepository->getSubjects($course['slug']);
+                }
+                return ['success' => true, 'data' => $courses];
+            },
             ['success' => true, 'data' => []],
             'listCourses'
         );

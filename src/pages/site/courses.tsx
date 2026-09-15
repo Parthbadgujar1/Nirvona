@@ -5,7 +5,9 @@ import { CourseCard } from "@/components/public/course-card";
 import { FaqSection } from "@/components/public/faq-section";
 import { FinalCta } from "@/components/public/final-cta";
 import { SectionHeading } from "@/components/shared/section-heading";
-import { COURSES } from "@/data/courses";
+import { LoadingState } from "@/components/shared/states";
+import { catalogueService } from "@/services/catalogue.service";
+import { useAsync } from "@/hooks/use-async";
 import { HOME_FAQS } from "@/data/site";
 import { usePageTitle } from "@/hooks/use-page-title";
 
@@ -14,6 +16,9 @@ export default function CoursesPage() {
     "Programs",
     "Class 11, Class 12, Devoter, JEE and NEET — five computer-based examination programs with all-India ranking and performance analytics.",
   );
+  const coursesAsync = useAsync(() => catalogueService.listCourses(), []);
+  const COURSES = coursesAsync.data ?? [];
+
   return (
     <>
       <section className="relative overflow-hidden border-b border-ink-200 bg-navy-950 py-16 text-white lg:py-20">
@@ -48,6 +53,10 @@ export default function CoursesPage() {
 
       <section className="section-pad bg-canvas">
         <div className="container-nv">
+          {coursesAsync.status === "loading" ? (
+            <LoadingState label="Loading programs" />
+          ) : (
+            <>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {COURSES.map((course) => (
               <CourseCard key={course.slug} course={course} />
@@ -93,23 +102,29 @@ export default function CoursesPage() {
                         </Link>
                       </th>
                       <td className="px-6 py-4 text-ink-600">
-                        {course.subjects.map((s) => s.name).join(", ")}
+                        {(course.subjects ?? []).map((s) => s.name).join(", ") || "—"}
                       </td>
-                      <td className="px-6 py-4 tabular text-ink-600">{course.stats[0].value}</td>
+                      <td className="px-6 py-4 tabular text-ink-600">
+                        {course.stats?.[0]?.value ?? "—"}
+                      </td>
                       <td className="px-6 py-4 font-medium text-navy-900">
                         {course.maxDurationMonths === 24 ? "2 years" : "1 year"}
                       </td>
                       <td className="px-6 py-4 text-ink-600">
-                        {course.examPattern.reduce((sum, row) => sum + row.questions, 0)} Q ·{" "}
-                        {course.examPattern.reduce((sum, row) => sum + row.marks, 0)} marks
+                        {(course.examPattern ?? []).reduce((sum, row) => sum + row.questions, 0)} Q ·{" "}
+                        {(course.examPattern ?? []).reduce((sum, row) => sum + row.marks, 0)} marks
                       </td>
-                      <td className="max-w-xs px-6 py-4 text-ink-600">{course.audience[0]}</td>
+                      <td className="max-w-xs px-6 py-4 text-ink-600">
+                        {course.audience?.[0] ?? "—"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </div>
+            </>
+          )}
         </div>
       </section>
 
