@@ -70,6 +70,7 @@ const AdminSettingsPage = lazy(() => import("@/pages/admin/settings"));
 
 const StudentDashboardPage = lazy(() => import("@/pages/student/dashboard"));
 const StudentProgramsPage = lazy(() => import("@/pages/student/programs"));
+const StudentPackagesPage = lazy(() => import("@/pages/student/packages"));
 const StudentExamsPage = lazy(() => import("@/pages/student/exams"));
 const StudentAdmitCardPage = lazy(() => import("@/pages/student/admit-card"));
 const StudentResultsPage = lazy(() => import("@/pages/student/results"));
@@ -142,6 +143,7 @@ export function App() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<StudentDashboardPage />} />
           <Route path="programs" element={<StudentProgramsPage />} />
+          <Route path="packages" element={<StudentPackagesPage />} />
           <Route path="exams" element={<StudentExamsPage />} />
           <Route path="admit-card" element={<StudentAdmitCardPage />} />
           <Route path="results" element={<StudentResultsPage />} />

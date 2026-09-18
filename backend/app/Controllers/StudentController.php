@@ -84,8 +84,27 @@ class StudentController
     public function updateProfile(Request $request, Response $response, array $args): Response
     {
         $studentId = $args['id'];
-        $data = json_decode($request->getBody(), true);
+        $data = json_decode($request->getBody(), true) ?? [];
         $result = $this->studentService->updateProfile($studentId, $data);
+
+        $statusCode = $result['success'] ? 200 : 400;
+        $response->getBody()->write(json_encode($result));
+        return $response
+            ->withStatus($statusCode)
+            ->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
+     * PUT /api/students/me/password
+     */
+    public function changePassword(Request $request, Response $response, array $args): Response
+    {
+        $data = json_decode($request->getBody(), true) ?? [];
+        $result = $this->studentService->changePassword(
+            $args['id'],
+            (string) ($data['currentPassword'] ?? ''),
+            (string) ($data['newPassword'] ?? '')
+        );
 
         $statusCode = $result['success'] ? 200 : 400;
         $response->getBody()->write(json_encode($result));

@@ -27,7 +27,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/shared/states
 import { useAsync } from "@/hooks/use-async";
 import { adminService, adminData } from "@/services/admin.service";
 import { catalogueService } from "@/services/catalogue.service";
-import { COURSES } from "@/data/courses";
+import { useCourses } from "@/hooks/use-catalogue";
 import { formatDate, formatCurrency } from "@/lib/format";
 import { exportRows, timestampedName } from "@/lib/export";
 import type { Student } from "@/types";
@@ -47,6 +47,7 @@ const EDIT_FIELDS: { key: keyof Student; label: string }[] = [
 ];
 
 export function StudentsManager() {
+  const { courses: COURSES } = useCourses();
   const students = useAsync(() => adminService.students(), []);
   const payments = useAsync(() => adminService.payments(), []);
   // `Student.examPreference` is a mock-only field the real `students`

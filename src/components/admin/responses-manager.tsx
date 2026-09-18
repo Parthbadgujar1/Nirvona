@@ -183,7 +183,7 @@ export function ResponsesManager() {
         <StatCard label="Candidate responses" numericValue={totalStudents} icon={Users} accent="royal" />
         <StatCard
           label="Awaiting import"
-          numericValue={(exams.data ?? []).filter((e) => new Date(e.date) >= new Date("2026-09-05")).length}
+          numericValue={(exams.data ?? []).filter((e) => new Date(e.date) >= new Date()).length}
           icon={Cpu}
           accent="ember"
           hint="Exams not yet conducted"

@@ -3,15 +3,23 @@
 import * as React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, LayoutDashboard, Menu, ShieldCheck, X } from "lucide-react";
+import { ChevronDown, LayoutDashboard, LogOut, Menu, X } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
-import { COURSES } from "@/data/courses";
+import { useCourses } from "@/hooks/use-catalogue";
+import { useSession } from "@/hooks/use-session";
 import { publicNav } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 export function Navbar() {
   const { pathname } = useLocation();
+  const { courses: COURSES } = useCourses();
+  // Signed-in visitors browsing the public site used to see "Login / Get
+  // Started" exactly like a stranger - so following any link out of the
+  // student portal (Add a program, Browse packages, ...) looked like being
+  // logged out and sent back to the landing page.
+  const { session, hydrated, signOut } = useSession();
+  const dashboardHref = session?.role === "admin" ? "/admin/dashboard" : "/student/dashboard";
   const [scrolled, setScrolled] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [programsOpen, setProgramsOpen] = React.useState(false);
@@ -147,12 +155,29 @@ export function Navbar() {
           </nav>
 
           <div className="hidden items-center gap-2 lg:flex">
-            <Button asChild variant="ghost" size="md">
-              <Link to="/login">Login</Link>
-            </Button>
-            <Button asChild size="md">
-              <Link to="/register">Get Started</Link>
-            </Button>
+            {hydrated && session ? (
+              <>
+                <Button asChild size="md">
+                  <Link to={dashboardHref}>
+                    <LayoutDashboard />
+                    My Dashboard
+                  </Link>
+                </Button>
+                <Button variant="ghost" size="md" onClick={() => void signOut()}>
+                  <LogOut />
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button asChild variant="ghost" size="md">
+                  <Link to="/login">Login</Link>
+                </Button>
+                <Button asChild size="md">
+                  <Link to="/register">Get Started</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           <button
@@ -220,26 +245,29 @@ export function Navbar() {
               </ul>
 
               <div className="mt-5 grid gap-2 border-t border-ink-100 pt-5">
-                <Button asChild size="lg" block>
-                  <Link to="/register">Get Started</Link>
-                </Button>
-                <Button asChild variant="secondary" size="lg" block>
-                  <Link to="/login">Login</Link>
-                </Button>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <Button asChild variant="ghost" size="sm">
-                    <Link to="/student/dashboard">
-                      <LayoutDashboard />
-                      Student demo
-                    </Link>
-                  </Button>
-                  <Button asChild variant="ghost" size="sm">
-                    <Link to="/admin/dashboard">
-                      <ShieldCheck />
-                      Admin demo
-                    </Link>
-                  </Button>
-                </div>
+                {hydrated && session ? (
+                  <>
+                    <Button asChild size="lg" block>
+                      <Link to={dashboardHref}>
+                        <LayoutDashboard />
+                        My Dashboard
+                      </Link>
+                    </Button>
+                    <Button variant="secondary" size="lg" block onClick={() => void signOut()}>
+                      <LogOut />
+                      Logout
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button asChild size="lg" block>
+                      <Link to="/register">Get Started</Link>
+                    </Button>
+                    <Button asChild variant="secondary" size="lg" block>
+                      <Link to="/login">Login</Link>
+                    </Button>
+                  </>
+                )}
               </div>
             </nav>
           </motion.div>

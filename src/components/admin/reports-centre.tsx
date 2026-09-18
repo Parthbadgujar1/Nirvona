@@ -90,7 +90,7 @@ export function ReportsCentre() {
           icon={FileSpreadsheet}
           accent="ember"
         />
-        <StatCard label="Last refresh" value={formatDate("2026-09-05")} icon={FileBarChart} accent="success" />
+        <StatCard label="Last refresh" value={formatDate(new Date().toISOString())} icon={FileBarChart} accent="success" />
       </div>
 
       <FilterBar

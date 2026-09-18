@@ -76,11 +76,22 @@ class StudentService extends BaseService
                     );
                 }
 
+                // The registration form collects a date of birth (it is printed on
+                // the admit card) - it used to be silently dropped here.
+                $dateOfBirth = null;
+                if (!empty($data['dateOfBirth'])) {
+                    $parsed = \DateTime::createFromFormat('Y-m-d', (string) $data['dateOfBirth']);
+                    if ($parsed && $parsed->format('Y-m-d') === $data['dateOfBirth']) {
+                        $dateOfBirth = $data['dateOfBirth'];
+                    }
+                }
+
                 // Create student
                 $student = $this->studentRepository->createWithPassword([
                     'fullName' => $data['fullName'],
                     'email' => $data['email'],
                     'mobile' => $data['mobile'],
+                    'dateOfBirth' => $dateOfBirth,
                     'className' => $data['className'],
                     'school' => $data['school'] ?? null,
                     'city' => $data['city'] ?? null,
@@ -163,14 +174,78 @@ class StudentService extends BaseService
                     );
                 }
 
-                // Update only allowed fields
+                // Only fields a student may legitimately change themselves -
+                // className, status, enrolledAt, passwordHash etc. are
+                // deliberately excluded (admins change those via AdminService).
                 $allowedFields = [
-                    'fullName', 'mobile', 'dateOfBirth', 'gender',
-                    'school', 'city', 'state', 'address'
+                    'fullName', 'email', 'mobile', 'dateOfBirth', 'gender',
+                    'school', 'city', 'state', 'address',
+                    'guardianName', 'guardianMobile', 'notificationPrefs',
                 ];
                 $updateData = array_intersect_key($data, array_flip($allowedFields));
 
-                $this->studentRepository->update($studentId, $updateData);
+                foreach ($updateData as $key => $value) {
+                    if (is_string($value)) {
+                        $updateData[$key] = trim($value);
+                    }
+                }
+
+                $phone = '/^[0-9+\s-]{10,15}$/';
+                $errors = [];
+
+                if (array_key_exists('fullName', $updateData) && mb_strlen($updateData['fullName']) < 3) {
+                    $errors['fullName'] = 'Enter your full name (at least 3 characters).';
+                }
+                if (array_key_exists('email', $updateData)) {
+                    if (!filter_var($updateData['email'], FILTER_VALIDATE_EMAIL)) {
+                        $errors['email'] = 'Enter a valid email address.';
+                    } else {
+                        // Email is the login identifier - it must stay unique
+                        // across every *other* account.
+                        $existing = $this->studentRepository->findByEmail($updateData['email']);
+                        if ($existing && $existing['id'] !== $studentId) {
+                            $errors['email'] = 'That email is already registered to another account.';
+                        }
+                    }
+                }
+                if (array_key_exists('mobile', $updateData) && !preg_match($phone, $updateData['mobile'])) {
+                    $errors['mobile'] = 'Enter a valid mobile number.';
+                }
+                if (
+                    !empty($updateData['guardianMobile'] ?? '')
+                    && !preg_match($phone, $updateData['guardianMobile'])
+                ) {
+                    $errors['guardianMobile'] = 'Enter a valid guardian mobile number.';
+                }
+
+                if (isset($updateData['notificationPrefs'])) {
+                    $prefs = is_array($updateData['notificationPrefs']) ? $updateData['notificationPrefs'] : [];
+                    $current = is_array($student['notificationPrefs'] ?? null) ? $student['notificationPrefs'] : [];
+                    $merged = [];
+                    foreach (['whatsapp', 'sms', 'email'] as $channel) {
+                        $merged[$channel] = array_key_exists($channel, $prefs)
+                            ? (bool) $prefs[$channel]
+                            : (bool) ($current[$channel] ?? true);
+                    }
+                    // Exam/result notifications must always reach the portal.
+                    $merged['portal'] = true;
+                    $updateData['notificationPrefs'] = $merged;
+                }
+
+                if (!empty($errors)) {
+                    throw new ServiceException(implode(' ', $errors), 'StudentService', false);
+                }
+
+                // Optional text columns: an emptied field is stored as NULL.
+                foreach (['school', 'city', 'state', 'address', 'guardianName', 'guardianMobile', 'gender'] as $optional) {
+                    if (array_key_exists($optional, $updateData) && $updateData[$optional] === '') {
+                        $updateData[$optional] = null;
+                    }
+                }
+
+                if (!empty($updateData)) {
+                    $this->studentRepository->update($studentId, $updateData);
+                }
 
                 $this->auditLog('UPDATE', 'Student', $studentId, [
                     'fields' => array_keys($updateData),
@@ -179,11 +254,76 @@ class StudentService extends BaseService
                 return [
                     'success' => true,
                     'message' => 'Profile updated successfully',
-                    'data' => array_merge($student, $updateData),
+                    'data' => $this->studentRepository->getById($studentId),
                 ];
             },
             null,
             'updateProfile'
+        );
+    }
+
+    /**
+     * Change a student's own portal password.
+     *
+     * Requires the current password (a left-open session alone shouldn't
+     * be enough to lock the owner out) and enforces the same strength
+     * rule the registration form advertises.
+     *
+     * @param string $studentId
+     * @param string $currentPassword
+     * @param string $newPassword
+     * @return array
+     */
+    public function changePassword(string $studentId, string $currentPassword, string $newPassword): array
+    {
+        return $this->executeWithFallback(
+            function () use ($studentId, $currentPassword, $newPassword) {
+                $student = $this->studentRepository->getById($studentId);
+                if (!$student) {
+                    throw new ServiceException("Student not found: {$studentId}", 'StudentService', false);
+                }
+
+                // findByEmail() is the one accessor that keeps passwordHash
+                // (getById strips it) - it's what login verification uses.
+                $withHash = $this->studentRepository->findByEmail($student['email']);
+                if (
+                    !$withHash
+                    || empty($withHash['passwordHash'])
+                    || !password_verify($currentPassword, $withHash['passwordHash'])
+                ) {
+                    throw new ServiceException('Your current password is incorrect.', 'StudentService', false);
+                }
+
+                if (
+                    strlen($newPassword) < 8
+                    || !preg_match('/[A-Z]/', $newPassword)
+                    || !preg_match('/[0-9]/', $newPassword)
+                ) {
+                    throw new ServiceException(
+                        'New password must be at least 8 characters with a capital letter and a number.',
+                        'StudentService',
+                        false
+                    );
+                }
+
+                if (hash_equals($currentPassword, $newPassword)) {
+                    throw new ServiceException(
+                        'New password must be different from your current password.',
+                        'StudentService',
+                        false
+                    );
+                }
+
+                $this->studentRepository->update($studentId, [
+                    'passwordHash' => password_hash($newPassword, PASSWORD_DEFAULT),
+                ]);
+
+                $this->auditLog('CHANGE_PASSWORD', 'Student', $studentId, []);
+
+                return ['success' => true, 'message' => 'Password updated successfully'];
+            },
+            null,
+            'changePassword'
         );
     }
 

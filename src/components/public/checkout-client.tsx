@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight, BadgePercent, Building2, CheckCircle2, CreditCard, Landmark, Lock, ShieldCheck,
@@ -16,7 +16,7 @@ import { Alert } from "@/components/ui/alert";
 import { Steps } from "@/components/ui/progress";
 import { EmptyState } from "@/components/shared/states";
 import { LogoMark } from "@/components/brand/logo";
-import { getCourse } from "@/data/courses";
+import { useCourses } from "@/hooks/use-catalogue";
 import { formatCurrency } from "@/lib/format";
 import { checkoutService, priceOrder } from "@/services/checkout.service";
 import { catalogueService } from "@/services/catalogue.service";
@@ -24,6 +24,7 @@ import { useOrders } from "@/hooks/use-orders";
 import { useSession } from "@/hooks/use-session";
 import { useAsync } from "@/hooks/use-async";
 import { studentService } from "@/services/student.service";
+import { loginUrl } from "@/lib/redirect";
 import { cn } from "@/lib/utils";
 import type { Payment } from "@/types";
 
@@ -43,7 +44,9 @@ const CHECKOUT_STEPS = [
 export function CheckoutClient() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { addOrder } = useOrders();
+  const { getCourse } = useCourses();
   const { session, hydrated } = useSession();
   const profile = useAsync(() => studentService.me(), [session?.id]);
   const packageId = params.get("package") ?? "";
@@ -76,9 +79,10 @@ export function CheckoutClient() {
   // time, then breaks unpredictably on the next render.
   React.useEffect(() => {
     if (hydrated && !session) {
-      navigate("/login", { replace: true });
+      // Return here (package intact) once they have signed in or registered.
+      navigate(loginUrl(location.pathname + location.search), { replace: true });
     }
-  }, [hydrated, session, navigate]);
+  }, [hydrated, session, navigate, location.pathname, location.search]);
 
   if (hydrated && !session) {
     return <div className="container-nv py-20" aria-busy="true" />;
@@ -102,7 +106,7 @@ export function CheckoutClient() {
     );
   }
 
-  const course = getCourse(pkg.courseSlug)!;
+  const course = getCourse(pkg.courseSlug);
   const summary = priceOrder(pkg, coupon?.percent ?? 0);
 
   async function applyCoupon(event: React.FormEvent) {
@@ -319,7 +323,7 @@ export function CheckoutClient() {
               <div className="p-6">
                 <div className="flex items-start gap-3">
                   <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-navy-50 font-display text-xs font-bold text-navy-800">
-                    {course.shortName.replace("Class ", "C")}
+                    {(course?.shortName ?? pkg.name.split(" — ")[0]).replace("Class ", "C")}
                   </span>
                   <div className="min-w-0">
                     <p className="font-display text-sm font-semibold text-navy-900">{pkg.name}</p>

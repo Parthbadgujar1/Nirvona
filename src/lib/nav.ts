@@ -18,6 +18,7 @@ export const studentNav: NavItem[] = [
   { label: "Dashboard", href: "/student/dashboard", icon: LayoutDashboard, group: "Overview" },
   { label: "My Profile", href: "/student/profile", icon: User, group: "Overview" },
   { label: "My Programs", href: "/student/programs", icon: GraduationCap, group: "Learning" },
+  { label: "Browse Packages", href: "/student/packages", icon: Boxes, group: "Learning" },
   { label: "My Exams", href: "/student/exams", icon: ClipboardList, group: "Learning" },
   { label: "Admit Card", href: "/student/admit-card", icon: IdCard, group: "Learning" },
   { label: "Results", href: "/student/results", icon: Trophy, group: "Performance" },

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft, ArrowRight, CheckCircle2, Eye, EyeOff, Mail, Phone, UserPlus,
@@ -13,7 +13,8 @@ import { Select } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Steps, ProgressBar } from "@/components/ui/progress";
 import { Alert } from "@/components/ui/alert";
-import { COURSES } from "@/data/courses";
+import { useCourses } from "@/hooks/use-catalogue";
+import { safeNext } from "@/lib/redirect";
 import { INDIAN_STATES } from "@/data/site";
 import { authService } from "@/services/auth.service";
 import { useSession } from "@/hooks/use-session";
@@ -42,7 +43,7 @@ interface FormState {
 const EMPTY: FormState = {
   fullName: "", mobile: "", email: "", dateOfBirth: "",
   className: "Class 11", school: "", city: "", state: "",
-  examPreference: "jee", password: "", confirmPassword: "", terms: false,
+  examPreference: "", password: "", confirmPassword: "", terms: false,
 };
 
 type Errors = Partial<Record<keyof FormState, string>>;
@@ -58,7 +59,11 @@ function passwordScore(password: string) {
 
 export function RegisterWizard() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const { courses } = useCourses();
   const { setSession } = useSession();
+  // Where to continue after signing up (e.g. the checkout they came from).
+  const next = safeNext(params.get("next"), "");
   const [step, setStep] = React.useState(0);
   const [values, setValues] = React.useState<FormState>(EMPTY);
   const [errors, setErrors] = React.useState<Errors>({});
@@ -115,7 +120,10 @@ export function RegisterWizard() {
     }
     setSubmitting(true);
     try {
-      const result = await authService.register(values);
+      const result = await authService.register({
+        ...values,
+        examPreference: values.examPreference || courses[0]?.slug || "",
+      });
       setSession({
         role: "student",
         name: values.fullName,
@@ -155,8 +163,8 @@ export function RegisterWizard() {
           <p className="mt-1 font-display text-xl font-bold tracking-tight text-navy-900">{done}</p>
         </div>
         <div className="mt-8 grid gap-2 sm:grid-cols-2">
-          <Button size="lg" onClick={() => navigate("/courses")}>
-            Choose a program
+          <Button size="lg" onClick={() => navigate(next || "/student/packages")}>
+            {next ? "Continue" : "Choose a program"}
             <ArrowRight />
           </Button>
           <Button variant="secondary" size="lg" onClick={() => navigate("/student/dashboard")}>
@@ -288,10 +296,10 @@ export function RegisterWizard() {
                   <Field label="Exam preference" htmlFor="examPreference" required>
                     <Select
                       id="examPreference"
-                      value={values.examPreference}
+                      value={values.examPreference || courses[0]?.slug || ""}
                       onChange={(e) => set("examPreference", e.target.value)}
                     >
-                      {COURSES.map((course) => (
+                      {courses.map((course) => (
                         <option key={course.slug} value={course.slug}>
                           {course.name}
                         </option>
@@ -463,7 +471,10 @@ export function RegisterWizard() {
 
       <p className="mt-6 text-center text-sm text-ink-500">
         Already have an account?{" "}
-        <Link to="/login" className="font-semibold text-ember-600 hover:text-ember-700">
+        <Link
+          to={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
+          className="font-semibold text-ember-600 hover:text-ember-700"
+        >
           Login
         </Link>
       </p>

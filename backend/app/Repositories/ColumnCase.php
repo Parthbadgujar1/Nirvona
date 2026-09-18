@@ -41,6 +41,7 @@ class ColumnCase
         'guardianname' => 'guardianName',
         'guardianmobile' => 'guardianMobile',
         'passwordhash' => 'passwordHash',
+        'notificationprefs' => 'notificationPrefs',
 
         // exams
         'courseslug' => 'courseSlug',

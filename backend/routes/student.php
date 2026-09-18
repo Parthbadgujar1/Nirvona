@@ -77,6 +77,7 @@ return function (App $app) {
     $meGroup = $app->group('/api/students/me', function ($group) use ($withId) {
         $group->get('', $withId(StudentController::class, 'getProfile'));
         $group->put('', $withId(StudentController::class, 'updateProfile'));
+        $group->put('/password', $withId(StudentController::class, 'changePassword'));
         // Combined dashboard fetch - registered before /enrollments etc.
         // (a static segment, so order doesn't actually matter here, but
         // kept near the top for visibility) so the dashboard page can do

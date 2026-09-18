@@ -14,7 +14,7 @@ import { useAsync } from "@/hooks/use-async";
 import { studentService } from "@/services/student.service";
 import type { Exam } from "@/types";
 
-const TODAY = new Date("2026-09-05");
+const TODAY = new Date();
 
 export function StudentExams() {
   const exams = useAsync(() => studentService.exams(), []);

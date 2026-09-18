@@ -10,15 +10,20 @@ import { FaqSection } from "@/components/public/faq-section";
 import { FinalCta } from "@/components/public/final-cta";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { Breadcrumbs } from "@/components/shared/page-header";
-import { LoadingState } from "@/components/shared/states";
-import { getCourse } from "@/data/courses";
+import { ErrorState, LoadingState } from "@/components/shared/states";
 import { catalogueService } from "@/services/catalogue.service";
 import { useAsync } from "@/hooks/use-async";
 import { usePageTitle } from "@/hooks/use-page-title";
 
 export default function CoursePage() {
   const { slug } = useParams<{ slug: string }>();
-  const course = slug ? getCourse(slug) : undefined;
+  // Live course (DB row + DB syllabus) - whatever an admin last saved in
+  // Admin -> Courses is what shows here.
+  const courseAsync = useAsync(
+    () => (slug ? catalogueService.getCourse(slug) : Promise.resolve(undefined)),
+    [slug],
+  );
+  const course = courseAsync.data;
 
   // Real packages (real ids) - was the frontend's mock array, so
   // "View packages" on a real course led to checkout with a package
@@ -27,18 +32,22 @@ export default function CoursePage() {
   // same useAsync pattern every other data-fetching page in this app
   // already uses.
   const packagesAsync = useAsync(
-    () => (course ? catalogueService.packagesForCourse(course.slug) : Promise.resolve([])),
-    [course?.slug],
+    () => (slug ? catalogueService.packagesForCourse(slug) : Promise.resolve([])),
+    [slug],
   );
 
   usePageTitle(course?.name ?? "Program not found", course?.description);
 
-  if (!course) {
-    return <Navigate to="/404" replace />;
+  if (courseAsync.status === "loading" || packagesAsync.status === "loading") {
+    return <LoadingState label="Loading program" />;
   }
 
-  if (packagesAsync.status === "loading") {
-    return <LoadingState label="Loading program" />;
+  if (courseAsync.status === "error") {
+    return <ErrorState onRetry={courseAsync.reload} />;
+  }
+
+  if (!course) {
+    return <Navigate to="/404" replace />;
   }
 
   const packages = packagesAsync.data ?? [];
@@ -185,7 +194,12 @@ export default function CoursePage() {
           <SectionHeading
             eyebrow="Examination pattern"
             title="How the paper is built"
-            description={`${totalQuestions} questions · ${totalMarks} marks · ${course.patternNotes[0].split("·")[0].replace("Duration:", "").trim()}`}
+            description={[
+              totalQuestions > 0 ? `${totalQuestions} questions · ${totalMarks} marks` : null,
+              course.patternNotes[0]?.split("·")[0].replace("Duration:", "").trim() || null,
+            ]
+              .filter(Boolean)
+              .join(" · ") || "Paper blueprint for this program"}
           />
 
           <div className="mt-12 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
@@ -249,6 +263,7 @@ export default function CoursePage() {
           </div>
 
           {/* Syllabus */}
+          {course.syllabus.length > 0 && (
           <div className="mt-14">
             <div className="flex items-center gap-2.5">
               <BookOpenCheck className="size-5 text-navy-700" aria-hidden />
@@ -283,6 +298,7 @@ export default function CoursePage() {
               ))}
             </div>
           </div>
+          )}
         </div>
       </section>
 
@@ -358,7 +374,9 @@ export default function CoursePage() {
         </section>
       )}
 
-      <FaqSection faqs={course.faqs} title={`${course.shortName} — frequently asked`} />
+      {course.faqs.length > 0 && (
+        <FaqSection faqs={course.faqs} title={`${course.shortName} — frequently asked`} />
+      )}
       <FinalCta />
     </>
   );

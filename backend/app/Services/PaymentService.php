@@ -60,6 +60,25 @@ class PaymentService extends BaseService
      */
     public function createOrder(array $data): array
     {
+        // An admin who retires a package (status = inactive) expects it to
+        // stop being purchasable immediately - the public listing already
+        // hides it, this stops a stale page/direct API call too. Checked
+        // outside the circuit breaker so the specific message isn't masked
+        // by the generic gateway fallback.
+        if (!empty($data['packageId'])) {
+            $existing = $this->packageRepository->getById($data['packageId']);
+            if ($existing && ($existing['status'] ?? 'active') !== 'active') {
+                $message = 'This package is no longer available.';
+                return [
+                    'success' => false,
+                    'data' => null,
+                    'message' => $message,
+                    'error' => ['code' => 'package_unavailable', 'message' => $message],
+                    'retryable' => false,
+                ];
+            }
+        }
+
         return $this->executeWithCircuitBreaker(
             'RazorpayGateway',
             function () use ($data) {

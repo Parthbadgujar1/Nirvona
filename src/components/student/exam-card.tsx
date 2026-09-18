@@ -8,7 +8,7 @@ import { formatDate, daysUntil } from "@/lib/format";
 import type { Exam } from "@/types";
 import { cn } from "@/lib/utils";
 
-const TODAY = new Date("2026-09-05");
+const TODAY = new Date();
 
 export function ExamCard({
   exam,

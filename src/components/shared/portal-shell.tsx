@@ -16,6 +16,7 @@ import {
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { useSession } from "@/hooks/use-session";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { loginUrl } from "@/lib/redirect";
 import type { NavItem } from "@/lib/nav";
 import { groupBy, cn } from "@/lib/utils";
 
@@ -39,7 +40,7 @@ export function PortalShell({
   unreadCount = 0,
   profileHref,
 }: PortalShellProps) {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const navigate = useNavigate();
   const { session, signOut, hydrated } = useSession(role);
   const { value: collapsed, setValue: setCollapsed } = useLocalStorage(
@@ -61,9 +62,10 @@ export function PortalShell({
   // very first render.
   React.useEffect(() => {
     if (hydrated && !session) {
-      navigate("/login", { replace: true });
+      // Remember where they were headed so signing in lands them back here.
+      navigate(loginUrl(pathname + search), { replace: true });
     }
-  }, [hydrated, session, navigate]);
+  }, [hydrated, session, navigate, pathname, search]);
 
   if (!session) {
     return (

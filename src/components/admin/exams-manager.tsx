@@ -23,12 +23,13 @@ import { EmptyState, ErrorState, LoadingState, StaggerGroup, StaggerItem } from 
 import { ExamFormDialog } from "./exam-form";
 import { useAsync } from "@/hooks/use-async";
 import { adminService } from "@/services/admin.service";
-import { COURSES } from "@/data/courses";
+import { useCourses } from "@/hooks/use-catalogue";
 import { getCentre } from "@/data/exams";
 import { formatDate, formatNumber } from "@/lib/format";
 import type { Exam, ExamStatus } from "@/types";
 
 export function ExamsManager() {
+  const { courses: COURSES } = useCourses();
   const exams = useAsync(() => adminService.exams(), []);
   const [search, setSearch] = React.useState("");
   const [filters, setFilters] = React.useState<Record<string, string>>({ course: "all", status: "all" });
@@ -49,7 +50,7 @@ export function ExamsManager() {
     return true;
   });
 
-  const upcoming = all.filter((e) => new Date(e.date) >= new Date("2026-09-05"));
+  const upcoming = all.filter((e) => new Date(e.date) >= new Date());
   const totalCandidates = all.reduce((sum, e) => sum + e.candidates, 0);
 
   async function applyStatus(examId: string, status: ExamStatus, message: string) {

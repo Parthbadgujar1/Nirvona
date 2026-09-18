@@ -138,7 +138,7 @@ export function PaymentsView() {
           icon={Wallet}
           title="No payment history"
           description="Once you purchase a package, your orders and receipts will appear here."
-          action={{ label: "Browse packages", href: "/packages" }}
+          action={{ label: "Browse packages", href: "/student/packages" }}
         />
       ) : (
         <>

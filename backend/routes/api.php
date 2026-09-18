@@ -32,8 +32,13 @@ return function (App $app) {
 
     // Student Routes
     $app->post('/api/students/register', [StudentController::class, 'register']);
-    $app->get('/api/students/{id}', [StudentController::class, 'getProfile']);
-    $app->put('/api/students/{id}', [StudentController::class, 'updateProfile']);
+    // GET/PUT /api/students/{id} were registered here with no auth at
+    // all - anyone could read any student's profile (email, mobile,
+    // address, guardian details) or overwrite it by guessing/knowing an
+    // id. Nothing used them: the student portal talks to the
+    // authenticated /api/students/me (routes/student.php) and the admin
+    // panel to /api/admin/students/{id}. Removed rather than wrapped in
+    // auth since there's no caller to serve.
     $app->get('/api/students/{id}/enrollments', [StudentController::class, 'getEnrollments']);
 
     // Exam Routes

@@ -17,11 +17,10 @@ import { ScoreTrendChart, ChartCard } from "@/components/charts";
 import { SubjectPerformance } from "./subject-performance";
 import { useAsync } from "@/hooks/use-async";
 import { studentService } from "@/services/student.service";
-import { getPackage } from "@/data/packages";
-import { getCourse } from "@/data/courses";
+import { useCourses, usePackages } from "@/hooks/use-catalogue";
 import { formatDate, daysUntil, relativeTime } from "@/lib/format";
 
-const TODAY = new Date("2026-09-05");
+const TODAY = new Date();
 
 export function StudentDashboard() {
   // A single combined fetch (StudentController::getDashboard) instead of
@@ -29,6 +28,10 @@ export function StudentDashboard() {
   // on PHP's single-threaded dev server, making this page one of the
   // slowest in the app to load.
   const dashboard = useAsync(() => studentService.dashboard(), []);
+  // Live catalogue: the active program card reflects what an admin has
+  // currently published for that course/package.
+  const { getCourse, status: coursesStatus } = useCourses();
+  const { getPackage, status: packagesStatus } = usePackages();
 
   if (dashboard.status === "error") {
     return (
@@ -40,15 +43,35 @@ export function StudentDashboard() {
     );
   }
 
-  if (dashboard.status === "loading" || !dashboard.data) {
+  if (
+    dashboard.status === "loading" ||
+    !dashboard.data ||
+    coursesStatus === "loading" ||
+    packagesStatus === "loading"
+  ) {
     return <LoadingState label="Loading your dashboard" />;
   }
 
   const { student, enrollments, exams, results, performance, notifications } = dashboard.data;
 
   const activeEnrollment = enrollments.find((e) => e.status === "active");
-  const activePackage = activeEnrollment ? getPackage(activeEnrollment.packageId) : undefined;
-  const activeCourse = activeEnrollment ? getCourse(activeEnrollment.courseSlug) : undefined;
+  const livePackage = activeEnrollment ? getPackage(activeEnrollment.packageId) : undefined;
+  const liveCourse = activeEnrollment ? getCourse(activeEnrollment.courseSlug) : undefined;
+  // If an admin has since retired the package/course, the enrollment still
+  // carries its own names (joined server-side) - keep showing the student's
+  // program rather than making it vanish from their dashboard.
+  const activePackage = activeEnrollment
+    ? {
+        durationLabel: livePackage?.durationLabel ?? activeEnrollment.packageName ?? "",
+        tests: livePackage?.tests ?? activeEnrollment.testsTotal,
+      }
+    : undefined;
+  const activeCourse = activeEnrollment
+    ? {
+        shortName: liveCourse?.shortName ?? activeEnrollment.courseName ?? "",
+        name: liveCourse?.name ?? activeEnrollment.courseName ?? "",
+      }
+    : undefined;
   const upcoming = exams.find((e) => new Date(e.date) >= TODAY);
   const latest = results[0];
   const unread = notifications.filter((n) => !n.read) ?? [];
@@ -289,7 +312,7 @@ export function StudentDashboard() {
               compact
               title="No active program"
               description="Enrol in a program to start appearing for Nirvona examinations."
-              action={{ label: "Browse packages", href: "/packages" }}
+              action={{ label: "Browse packages", href: "/student/packages" }}
             />
           )}
 

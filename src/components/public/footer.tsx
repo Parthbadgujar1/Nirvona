@@ -1,12 +1,13 @@
 import { Link } from "react-router-dom";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
-import { COURSES } from "@/data/courses";
+import { useCourses } from "@/hooks/use-catalogue";
+import type { Course } from "@/types";
 
-const COLUMNS = [
+const buildColumns = (courses: Course[]) => [
   {
     title: "Programs",
-    links: COURSES.map((course) => ({
+    links: courses.map((course) => ({
       label: course.shortName,
       href: `/courses/${course.slug}`,
     })),
@@ -32,6 +33,8 @@ const COLUMNS = [
 ];
 
 export function Footer() {
+  const { courses } = useCourses();
+  const COLUMNS = buildColumns(courses);
   return (
     <footer className="border-t border-navy-800/40 bg-navy-950 text-white/70">
       <div className="container-nv py-14 lg:py-16">

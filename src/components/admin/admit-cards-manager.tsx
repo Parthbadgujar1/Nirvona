@@ -19,7 +19,7 @@ import { AdmitCardSheet } from "@/components/shared/admit-card";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/states";
 import { useAsync } from "@/hooks/use-async";
 import { adminService } from "@/services/admin.service";
-import { getCourse } from "@/data/courses";
+import { useCourses } from "@/hooks/use-catalogue";
 import { formatNumber, formatDateTime } from "@/lib/format";
 import { exportRows, timestampedName } from "@/lib/export";
 import type { AdmitCard } from "@/types";
@@ -48,6 +48,7 @@ const BULK_COPY: Record<BulkAction, { title: string; description: string; confir
 };
 
 export function AdmitCardsManager() {
+  const { getCourse } = useCourses();
   const exams = useAsync(() => adminService.exams(), []);
   const students = useAsync(() => adminService.students(), []);
 

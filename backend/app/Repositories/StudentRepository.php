@@ -29,6 +29,36 @@ class StudentRepository extends BaseRepository
         $row = parent::getById($id);
         if ($row) {
             unset($row['passwordHash']);
+            $row = $this->decodePrefs($row);
+        }
+        return $row;
+    }
+
+    /**
+     * BaseRepository::update() binds values as-is; notificationPrefs is
+     * JSONB, so a PHP array has to be encoded first (same reason
+     * PackageRepository/CourseRepository override this).
+     *
+     * @param string $id
+     * @param array $data
+     * @return bool
+     */
+    public function update(string $id, array $data): bool
+    {
+        if (isset($data['notificationPrefs']) && is_array($data['notificationPrefs'])) {
+            $data['notificationPrefs'] = json_encode($data['notificationPrefs']);
+        }
+        return parent::update($id, $data);
+    }
+
+    /**
+     * @param array $row
+     * @return array
+     */
+    private function decodePrefs(array $row): array
+    {
+        if (isset($row['notificationPrefs']) && is_string($row['notificationPrefs'])) {
+            $row['notificationPrefs'] = json_decode($row['notificationPrefs'], true) ?? [];
         }
         return $row;
     }
@@ -71,7 +101,7 @@ class StudentRepository extends BaseRepository
         $data['passwordHash'] = password_hash($plainPassword, PASSWORD_DEFAULT);
         $created = $this->create($data);
         unset($created['passwordHash']);
-        return $created;
+        return $this->decodePrefs($created);
     }
 
     /**
@@ -219,7 +249,7 @@ class StudentRepository extends BaseRepository
     {
         return array_map(function (array $row) {
             unset($row['passwordHash']);
-            return $row;
+            return $this->decodePrefs($row);
         }, $rows);
     }
 }

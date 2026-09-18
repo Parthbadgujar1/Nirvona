@@ -36,7 +36,9 @@ class PackageService extends BaseService
             function () use ($id) {
                 $package = $this->packageRepository->getById($id);
 
-                if (!$package) {
+                // Retired packages 404 on the public site (they stay visible to
+                // admins via the admin listing, which doesn't go through here).
+                if (!$package || ($package['status'] ?? 'active') !== 'active') {
                     throw new ServiceException("Package not found: {$id}", 'PackageService', false);
                 }
 

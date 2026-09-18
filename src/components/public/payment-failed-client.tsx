@@ -6,7 +6,8 @@ import { ArrowLeft, LifeBuoy, RefreshCcw, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
-import { getPackage } from "@/data/packages";
+import { useAsync } from "@/hooks/use-async";
+import { catalogueService } from "@/services/catalogue.service";
 import { formatCurrency } from "@/lib/format";
 import { priceOrder } from "@/services/checkout.service";
 
@@ -21,7 +22,11 @@ export function PaymentFailedClient() {
   const [params] = useSearchParams();
   const packageId = params.get("package") ?? "";
   const reason = params.get("reason") ?? "The transaction could not be completed.";
-  const pkg = getPackage(packageId);
+  const pkgAsync = useAsync(
+    () => (packageId ? catalogueService.getPackage(packageId) : Promise.resolve(undefined)),
+    [packageId],
+  );
+  const pkg = pkgAsync.data;
   const summary = pkg ? priceOrder(pkg) : null;
 
   return (
@@ -85,7 +90,7 @@ export function PaymentFailedClient() {
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg" className="flex-1">
-                <Link to={pkg ? `/checkout?package=${pkg.id}` : "/packages"}>
+                <Link to={pkg ? `/checkout?package=${pkg.id}` : "/student/packages"}>
                   <RefreshCcw />
                   Try payment again
                 </Link>
@@ -100,7 +105,7 @@ export function PaymentFailedClient() {
 
             <p className="mt-5 text-center">
               <Link
-                to="/packages"
+                to="/student/packages"
                 className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-500 transition-colors hover:text-navy-900"
               >
                 <ArrowLeft className="size-4" aria-hidden />

@@ -10,10 +10,13 @@ export function PackageCard({
   pkg,
   className,
   courseName,
+  showDetails = true,
 }: {
   pkg: Package;
   className?: string;
   courseName?: string;
+  /** Hide the link to the public detail page (used inside the student portal). */
+  showDetails?: boolean;
 }) {
   const recommended = pkg.recommended;
   const perTest = Math.round(pkg.price / pkg.tests);
@@ -107,9 +110,11 @@ export function PackageCard({
               <ArrowRight />
             </Link>
           </Button>
-          <Button asChild variant="ghost" size="sm" block>
-            <Link to={`/packages/${pkg.id}`}>View Details</Link>
-          </Button>
+          {showDetails && (
+            <Button asChild variant="ghost" size="sm" block>
+              <Link to={`/packages/${pkg.id}`}>View Details</Link>
+            </Button>
+          )}
         </div>
       </div>
     </article>

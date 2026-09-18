@@ -29,6 +29,8 @@ export interface Student {
   guardianName?: string;
   guardianMobile?: string;
   address?: string;
+  /** Per-channel opt-ins; `portal` is always true (exam/result notices must reach the student). */
+  notificationPrefs?: { whatsapp: boolean; sms: boolean; email: boolean; portal: boolean };
 }
 
 // There is exactly one admin account type - no super-admin/exam-manager/
@@ -45,7 +47,9 @@ export type ClassLevel = "Class 11" | "Class 12" | "Dropper" | "Other";
 
 /* ------------------------------ Catalogue ---------------------------- */
 
-export type CourseSlug = "class-11" | "class-12" | "devoter" | "jee" | "neet";
+// Admins can create courses beyond the five seeded ones, so this is an open
+// string; the literals are kept purely for editor autocomplete.
+export type CourseSlug = "class-11" | "class-12" | "devoter" | "jee" | "neet" | (string & {});
 
 export interface Course {
   slug: CourseSlug;
@@ -55,7 +59,7 @@ export interface Course {
   description: string;
   audience: string[];
   subjects: Subject[];
-  maxDurationMonths: 12 | 24;
+  maxDurationMonths: number;
   totalTests: number;
   accent: "navy" | "royal" | "ember" | "saffron" | "teal";
   icon: string;
@@ -107,6 +111,8 @@ export interface Package {
   discountPercent?: number;
   tests: number;
   recommended?: boolean;
+  /** Public endpoints only ever return "active" packages; the admin listing includes retired ones. */
+  status?: "active" | "inactive";
   tagline: string;
   features: string[];
   benefits: string[];
@@ -133,6 +139,10 @@ export interface Enrollment {
   paymentId: ID;
   testsTaken: number;
   testsTotal: number;
+  /** Joined server-side on the student's own enrollments list - lets the UI still
+   * label an enrollment whose package/course an admin has since retired. */
+  packageName?: string;
+  courseName?: string;
 }
 
 /* ------------------------------- Exams ------------------------------- */

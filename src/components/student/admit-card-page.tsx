@@ -12,12 +12,11 @@ import { AdmitCardSheet } from "@/components/shared/admit-card";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/states";
 import { useAsync } from "@/hooks/use-async";
 import { studentService } from "@/services/student.service";
-import { getPackage } from "@/data/packages";
-import { getCourse } from "@/data/courses";
+import { useCourses, usePackages } from "@/hooks/use-catalogue";
 import { exportRows, timestampedName } from "@/lib/export";
 import { formatDate } from "@/lib/format";
 
-const TODAY = new Date("2026-09-05");
+const TODAY = new Date();
 
 export function AdmitCardPage() {
   const student = useAsync(() => studentService.me(), []);
@@ -28,6 +27,8 @@ export function AdmitCardPage() {
   // "success" state with no data instead of "error".
   const admitCard = useAsync(() => studentService.admitCard(), []);
   const enrollments = useAsync(() => studentService.enrollments(), []);
+  const { getCourse } = useCourses();
+  const { getPackage } = usePackages();
 
   const eligible = React.useMemo(
     () =>
@@ -79,8 +80,8 @@ export function AdmitCardPage() {
           "Student ID": student.data.id,
           "Candidate Name": student.data.fullName,
           "Roll Number": admitCard.data.rollNumber,
-          Course: course?.name ?? "—",
-          Package: pkg?.name ?? "—",
+          Course: course?.name ?? activeEnrollment?.courseName ?? "—",
+          Package: pkg?.name ?? activeEnrollment?.packageName ?? "—",
           Exam: selected.name,
           "Exam Date": selected.date,
           "Reporting Time": selected.reportingTime,
@@ -181,8 +182,8 @@ export function AdmitCardPage() {
               centre={centre.data}
               admitCard={admitCard.data}
               credential={credential.data}
-              packageName={pkg?.name ?? "—"}
-              courseName={course?.name ?? "—"}
+              packageName={pkg?.name ?? activeEnrollment?.packageName ?? "—"}
+              courseName={course?.name ?? activeEnrollment?.courseName ?? "—"}
             />
           )}
 

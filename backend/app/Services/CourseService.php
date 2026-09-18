@@ -64,7 +64,9 @@ class CourseService extends BaseService
             function () use ($slug) {
                 $course = $this->courseRepository->findBySlug($slug);
 
-                if (!$course) {
+                // Deactivated courses 404 publicly (admins still see them via
+                // the admin listing).
+                if (!$course || ($course['status'] ?? 'active') !== 'active') {
                     throw new ServiceException("Course not found: {$slug}", 'CourseService', false);
                 }
 

@@ -20,7 +20,7 @@ import { useAsync } from "@/hooks/use-async";
 import { adminService } from "@/services/admin.service";
 import { formatCurrency, formatDate, formatNumber, relativeTime } from "@/lib/format";
 
-const TODAY = new Date("2026-09-05T12:00:00Z");
+const TODAY = new Date();
 
 /** Presentation-only - the backend returns course names/counts, not colors. */
 const COURSE_COLORS = ["#ea4108", "#10b981", "#0e1d4a", "#2563eb", "#f59e0b", "#7c3aed"];
@@ -58,7 +58,7 @@ export function AdminDashboard() {
         description="Platform health across students, purchases, examinations and evaluation."
         meta={
           <p className="text-xs text-ink-400">
-            Data as of {formatDate("2026-09-05", "full")} · updated every 15 minutes
+            Data as of {formatDate(new Date().toISOString(), "full")} · updated every 15 minutes
           </p>
         }
         actions={

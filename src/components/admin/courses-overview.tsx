@@ -21,7 +21,6 @@ import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { ErrorState, LoadingState } from "@/components/shared/states";
-import { COURSE_SPLIT } from "@/data/payments";
 import { useAsync } from "@/hooks/use-async";
 import { adminService } from "@/services/admin.service";
 import { formatNumber } from "@/lib/format";
@@ -53,6 +52,9 @@ const EMPTY_DRAFT = {
 export function CoursesOverview() {
   const coursesAsync = useAsync(() => adminService.courses(), []);
   const packagesAsync = useAsync(() => adminService.packages(), []);
+  // Real per-course student counts (was a bundled mock split).
+  const splitAsync = useAsync(() => adminService.courseSplit(), []);
+  const COURSE_SPLIT = splitAsync.data ?? [];
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Course | null>(null);
   const [draft, setDraft] = React.useState(EMPTY_DRAFT);

@@ -2,7 +2,7 @@ import { PackagesBrowser } from "@/components/public/packages-browser";
 import { FaqSection } from "@/components/public/faq-section";
 import { FinalCta } from "@/components/public/final-cta";
 import { SectionHeading } from "@/components/shared/section-heading";
-import { COURSES } from "@/data/courses";
+import { useCourses } from "@/hooks/use-catalogue";
 import { HOME_FAQS } from "@/data/site";
 import { catalogueService } from "@/services/catalogue.service";
 import { useAsync } from "@/hooks/use-async";
@@ -15,18 +15,19 @@ export default function PackagesPage() {
     "Compare Nirvona CBT examination packages across Class 11, Class 12, Devoter, JEE and NEET — 3 months to 2 years.",
   );
 
-  // Real packages (real ids, real prices) from the backend - course
-  // catalogue copy (name, description, syllabus) stays on the bundled
-  // COURSES data; see the comment in catalogue.service.ts for why.
-  // Previously an `await` in a Next.js server component; client-side
-  // here via the same useAsync pattern the rest of the app uses.
+  // Real packages (real ids, real prices) and real courses, both from
+  // the backend - so whatever an admin adds, edits or removes in the
+  // admin panel is what visitors see here.
   const packagesAsync = useAsync(() => catalogueService.listPackages(), []);
+  const { courses: COURSES, status: coursesStatus } = useCourses();
 
-  if (packagesAsync.status === "loading" || !packagesAsync.data) {
+  if (packagesAsync.status === "loading" || !packagesAsync.data || coursesStatus === "loading") {
     return <LoadingState label="Loading packages" />;
   }
 
   const packages = packagesAsync.data;
+  const longPrograms = COURSES.filter((c) => c.maxDurationMonths >= 24).map((c) => c.shortName);
+  const shortPrograms = COURSES.filter((c) => c.maxDurationMonths < 24).map((c) => c.shortName);
 
   return (
     <>
@@ -125,8 +126,12 @@ export default function PackagesPage() {
               </table>
             </div>
             <p className="border-t border-ink-100 bg-ink-50/60 px-6 py-3 text-xs text-ink-500">
-              A 2-year package is available on Class 11, JEE and NEET only. Class 12 and Devoter are
-              single-session programs capped at 12 months.
+              {longPrograms.length > 0 && (
+                <>A 2-year package is available on {longPrograms.join(", ")} only. </>
+              )}
+              {shortPrograms.length > 0 && (
+                <>{shortPrograms.join(" and ")} {shortPrograms.length === 1 ? "is a single-session program" : "are single-session programs"} capped at 12 months.</>
+              )}
             </p>
           </div>
         </div>

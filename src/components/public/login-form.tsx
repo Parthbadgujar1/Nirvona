@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, LayoutDashboard, LogIn, Mail, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,15 @@ import { Field, Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert } from "@/components/ui/alert";
 import { useSession } from "@/hooks/use-session";
+import { safeNext } from "@/lib/redirect";
 
 export function LoginForm() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  // Where the visitor was headed before being asked to sign in (e.g. a
+  // checkout for a specific package) - previously ignored, so signing in
+  // always dropped them on the dashboard and the package they picked was lost.
+  const returnTo = safeNext(params.get("next"), "");
   const { signIn } = useSession();
   const [identifier, setIdentifier] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -34,7 +40,12 @@ export function LoginForm() {
     try {
       const session = await signIn(identifier, password);
       toast.success(`Welcome back, ${session.name.split(" ")[0]}`);
-      navigate(session.role === "admin" ? "/admin/dashboard" : "/student/dashboard");
+      const isAdminPath = returnTo.startsWith("/admin");
+      if (session.role === "admin") {
+        navigate(isAdminPath ? returnTo : "/admin/dashboard");
+      } else {
+        navigate(returnTo && !isAdminPath ? returnTo : "/student/dashboard");
+      }
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "Unable to sign in.");
     } finally {
@@ -143,7 +154,10 @@ export function LoginForm() {
 
       <p className="mt-6 text-center text-sm text-ink-500">
         Don&apos;t have an account?{" "}
-        <Link to="/register" className="font-semibold text-ember-600 hover:text-ember-700">
+        <Link
+          to={returnTo ? `/register?next=${encodeURIComponent(returnTo)}` : "/register"}
+          className="font-semibold text-ember-600 hover:text-ember-700"
+        >
           Register
         </Link>
       </p>

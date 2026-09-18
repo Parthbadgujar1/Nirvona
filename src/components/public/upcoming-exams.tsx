@@ -33,7 +33,7 @@ export function UpcomingExams() {
         <ul className="mt-12 grid gap-5 lg:grid-cols-3">
           {UPCOMING.map((exam) => {
             const centre = getCentre(exam.centreId);
-            const days = daysUntil(exam.date, new Date("2026-09-05"));
+            const days = daysUntil(exam.date, new Date());
             return (
               <li key={exam.id}>
                 <article className="flex h-full flex-col overflow-hidden rounded-xl border border-ink-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">

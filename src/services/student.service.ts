@@ -14,7 +14,7 @@ import {
   STUDENT_EXAM_CREDENTIAL,
   STUDENT_NOTIFICATIONS,
 } from "@/data/operations";
-import type { AppNotification, Enrollment, Exam, PerformanceAnalysis, Result } from "@/types";
+import type { AppNotification, Enrollment, Exam, PerformanceAnalysis, Result, Student } from "@/types";
 import { resolve, put, ApiError } from "./http";
 
 export interface StudentDashboard {
@@ -61,7 +61,11 @@ async function resolveOptional<T>(promise: Promise<T>): Promise<T | undefined> {
  */
 export const studentService = {
   // Profile
-  me: () => resolve(CURRENT_STUDENT, "/students/me"),
+  me: (): Promise<Student> => resolve(CURRENT_STUDENT, "/students/me"),
+  /** Persist the signed-in student's own profile (name, contact, address, guardian, notification prefs). */
+  updateProfile: (payload: Record<string, unknown>): Promise<Student> => put("/students/me", payload),
+  changePassword: (currentPassword: string, newPassword: string): Promise<void> =>
+    put("/students/me/password", { currentPassword, newPassword }),
 
   // Combines the profile/enrollments/exams/results/performance/
   // notifications fetches the dashboard page needs into one request,
@@ -89,7 +93,7 @@ export const studentService = {
   exams: () => resolve(studentExams, "/students/me/exams"),
   upcomingExam: async () => {
     const exams = await resolve(studentExams, "/students/me/exams");
-    return exams.find((e) => new Date(e.date) >= new Date("2026-09-05"));
+    return exams.find((e) => new Date(e.date) >= new Date());
   },
   centre: (id: string) => resolve(getCentre(id), `/exam-centres/${id}`),
 

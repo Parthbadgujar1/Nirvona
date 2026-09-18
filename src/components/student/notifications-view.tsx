@@ -18,7 +18,7 @@ import { relativeTime, formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { AppNotification } from "@/types";
 
-const TODAY = new Date("2026-09-05T12:00:00Z");
+const TODAY = new Date();
 
 const TYPE_META: Record<AppNotification["type"], { icon: typeof Bell; tone: string; href: string }> = {
   exam: { icon: Monitor, tone: "bg-royal-50 text-royal-600", href: "/student/exams" },

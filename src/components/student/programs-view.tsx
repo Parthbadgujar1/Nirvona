@@ -11,25 +11,31 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState, ErrorState, LoadingState, StaggerGroup, StaggerItem } from "@/components/shared/states";
 import { useAsync } from "@/hooks/use-async";
 import { studentService } from "@/services/student.service";
-import { getPackage } from "@/data/packages";
-import { getCourse } from "@/data/courses";
+import { useCourses, usePackages } from "@/hooks/use-catalogue";
 import { formatDate, daysUntil } from "@/lib/format";
-import { COURSES } from "@/data/courses";
 
-const TODAY = new Date("2026-09-05");
+const TODAY = new Date();
 
 export function ProgramsView() {
   const enrollments = useAsync(() => studentService.enrollments(), []);
+  // Live catalogue - what an admin edits in Courses/Packages shows up here.
+  const { courses, getCourse, status: coursesStatus } = useCourses();
+  const { getPackage, status: packagesStatus } = usePackages();
 
   if (enrollments.status === "error") return <ErrorState onRetry={enrollments.reload} />;
-  if (enrollments.status === "loading" || !enrollments.data) {
+  if (
+    enrollments.status === "loading" ||
+    !enrollments.data ||
+    coursesStatus === "loading" ||
+    packagesStatus === "loading"
+  ) {
     return <LoadingState label="Loading your programs" />;
   }
 
   const active = enrollments.data.filter((e) => e.status === "active");
   const past = enrollments.data.filter((e) => e.status !== "active");
   const enrolledSlugs = new Set(enrollments.data.map((e) => e.courseSlug));
-  const available = COURSES.filter((c) => !enrolledSlugs.has(c.slug));
+  const available = courses.filter((c) => !enrolledSlugs.has(c.slug));
 
   return (
     <div className="space-y-6">
@@ -39,7 +45,7 @@ export function ProgramsView() {
         breadcrumbs={[{ label: "Dashboard", href: "/student/dashboard" }, { label: "My Programs" }]}
         actions={
           <Button asChild size="md">
-            <Link to="/packages">
+            <Link to="/student/packages">
               <Plus />
               Add a program
             </Link>
@@ -53,8 +59,8 @@ export function ProgramsView() {
           icon={GraduationCap}
           title="You are not enrolled in any program yet"
           description="Choose a program and package to start appearing for Nirvona computer-based examinations."
-          action={{ label: "Browse packages", href: "/packages" }}
-          secondaryAction={{ label: "Compare programs", href: "/courses" }}
+          action={{ label: "Browse packages", href: "/student/packages" }}
+          secondaryAction={{ label: "Compare programs", href: "/student/packages" }}
         />
       ) : (
         <>
@@ -67,7 +73,7 @@ export function ProgramsView() {
                 icon={CalendarRange}
                 title="No active enrolment"
                 description="All your packages have expired. Renew to continue appearing for examinations."
-                action={{ label: "Renew now", href: "/packages" }}
+                action={{ label: "Renew now", href: "/student/packages" }}
               />
             ) : (
               <StaggerGroup className="mt-4 grid gap-5 lg:grid-cols-2">
@@ -81,14 +87,14 @@ export function ProgramsView() {
                         <div className="flex items-start justify-between gap-3 border-b border-ink-100 p-5">
                           <div className="flex items-start gap-3">
                             <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-navy-50 font-display text-xs font-bold text-navy-800">
-                              {course?.shortName.replace("Class ", "C")}
+                              {(course?.shortName ?? enrollment.courseName ?? "").replace("Class ", "C")}
                             </span>
                             <div className="min-w-0">
                               <h3 className="font-display text-base font-semibold text-navy-900">
-                                {course?.name}
+                                {course?.name ?? enrollment.courseName}
                               </h3>
                               <p className="mt-0.5 text-xs text-ink-500">
-                                {pkg?.durationLabel} · {enrollment.id}
+                                {pkg?.durationLabel ?? enrollment.packageName} · {enrollment.id}
                               </p>
                             </div>
                           </div>
@@ -148,7 +154,7 @@ export function ProgramsView() {
 
                           {course && (
                             <ul className="mt-4 flex flex-wrap gap-1.5">
-                              {course.subjects.map((subject) => (
+                              {(course.subjects ?? []).map((subject) => (
                                 <li key={subject.code}>
                                   <Badge tone="neutral" size="sm">
                                     {subject.name}
@@ -190,16 +196,16 @@ export function ProgramsView() {
                       <Card className="flex flex-wrap items-center gap-4 p-4">
                         <div className="min-w-0 flex-1">
                           <p className="font-display text-sm font-semibold text-navy-900">
-                            {course?.name}
+                            {course?.name ?? enrollment.courseName}
                           </p>
                           <p className="mt-0.5 text-xs text-ink-500">
-                            {pkg?.durationLabel} · {formatDate(enrollment.startDate)} –{" "}
+                            {pkg?.durationLabel ?? enrollment.packageName} · {formatDate(enrollment.startDate)} –{" "}
                             {formatDate(enrollment.endDate)} · {enrollment.testsTaken} exams taken
                           </p>
                         </div>
                         <StatusBadge status={enrollment.status} />
                         <Button asChild variant="secondary" size="sm">
-                          <Link to={`/packages?course=${enrollment.courseSlug}`}>Renew</Link>
+                          <Link to={`/student/packages?course=${enrollment.courseSlug}`}>Renew</Link>
                         </Button>
                       </Card>
                     </li>
@@ -234,7 +240,7 @@ export function ProgramsView() {
                   </div>
                   <p className="mt-2 text-sm leading-relaxed text-ink-500">{course.tagline}</p>
                   <Button asChild variant="secondary" size="sm" className="mt-4">
-                    <Link to={`/courses/${course.slug}`}>
+                    <Link to={`/student/packages?course=${course.slug}`}>
                       View packages
                       <ArrowRight />
                     </Link>

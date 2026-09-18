@@ -11,9 +11,9 @@ import { Steps } from "@/components/ui/progress";
 import { Receipt } from "@/components/shared/receipt";
 import { EmptyState } from "@/components/shared/states";
 import { useOrders } from "@/hooks/use-orders";
-import { STUDENT_PAYMENTS } from "@/data/payments";
-import { CURRENT_STUDENT } from "@/data/students";
-import { getPackage } from "@/data/packages";
+import { useAsync } from "@/hooks/use-async";
+import { studentService } from "@/services/student.service";
+import { catalogueService } from "@/services/catalogue.service";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { exportRows, timestampedName } from "@/lib/export";
 
@@ -23,18 +23,38 @@ const CHECKOUT_STEPS = [
   { label: "Confirmation", description: "Receipt & access" },
 ];
 
+/** Fallback when the package has since been retired: "3M"/"6M"/"1Y"/"2Y" -> months. */
+function monthsFromDuration(duration: string): number {
+  const n = parseInt(duration, 10) || 1;
+  return duration.toUpperCase().endsWith("Y") ? n * 12 : n;
+}
+
 export function PaymentSuccessClient() {
   const [params] = useSearchParams();
   const orderId = params.get("order");
   const { orders, hydrated } = useOrders();
   const [showReceipt, setShowReceipt] = React.useState(false);
 
+  // Real data only: the signed-in student's own profile and payment history.
+  // This page used to fall back to a hard-coded mock student/payment (and
+  // print the mock student's name and email on the receipt).
+  const student = useAsync(() => studentService.me(), []);
+  const history = useAsync(() => studentService.payments(), []);
+
   const payment =
     orders.find((o) => o.id === orderId) ??
-    STUDENT_PAYMENTS.find((o) => o.id === orderId) ??
-    (hydrated && !orderId ? STUDENT_PAYMENTS[0] : undefined);
+    history.data?.find((o) => o.id === orderId) ??
+    (!orderId ? history.data?.find((o) => o.status === "successful") : undefined);
 
-  if (hydrated && !payment) {
+  const pkgAsync = useAsync(
+    () => (payment?.packageId ? catalogueService.getPackage(payment.packageId) : Promise.resolve(undefined)),
+    [payment?.packageId],
+  );
+  const pkg = pkgAsync.data;
+
+  const stillLoading = history.status === "loading" || student.status === "loading";
+
+  if (hydrated && !stillLoading && !payment) {
     return (
       <div className="container-nv py-20">
         <EmptyState
@@ -42,20 +62,20 @@ export function PaymentSuccessClient() {
           title="Order not found"
           description="We could not find that order. If you have just paid, check your email for the receipt or open your payments history."
           action={{ label: "View payment history", href: "/student/payments" }}
-          secondaryAction={{ label: "Browse packages", href: "/packages" }}
+          secondaryAction={{ label: "Browse packages", href: "/student/packages" }}
         />
       </div>
     );
   }
 
-  if (!payment) {
+  if (!payment || !student.data) {
     return <div className="container-nv py-20" aria-busy="true" />;
   }
 
-  const pkg = getPackage(payment.packageId);
+  const profile = student.data;
   const endDate = (() => {
     const date = new Date(payment.date);
-    date.setMonth(date.getMonth() + (pkg?.durationMonths ?? 12));
+    date.setMonth(date.getMonth() + (pkg?.durationMonths ?? monthsFromDuration(payment.duration)));
     return date.toISOString().slice(0, 10);
   })();
 
@@ -65,8 +85,8 @@ export function PaymentSuccessClient() {
       [
         {
           "Receipt No": payment!.id,
-          "Student ID": CURRENT_STUDENT.id,
-          "Student Name": CURRENT_STUDENT.fullName,
+          "Student ID": profile.id,
+          "Student Name": profile.fullName,
           Package: payment!.packageName,
           Duration: payment!.duration,
           Amount: payment!.amount,
@@ -124,7 +144,7 @@ export function PaymentSuccessClient() {
             </h1>
             <p className="relative mx-auto mt-3 max-w-md text-sm leading-relaxed text-white/70">
               Your enrolment is active. A receipt has been emailed to{" "}
-              <span className="font-medium text-white">{CURRENT_STUDENT.email}</span>.
+              <span className="font-medium text-white">{profile.email}</span>.
             </p>
             <p className="relative mt-6 font-display text-4xl font-extrabold tabular text-white">
               {formatCurrency(payment.total)}
@@ -134,7 +154,7 @@ export function PaymentSuccessClient() {
           <dl className="grid divide-y divide-ink-100 sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-3">
             {[
               { label: "Order ID", value: payment.id },
-              { label: "Student ID", value: CURRENT_STUDENT.id },
+              { label: "Student ID", value: profile.id },
               { label: "Package", value: payment.packageName },
               { label: "Amount paid", value: formatCurrency(payment.total) },
               { label: "Payment date", value: formatDate(payment.date) },
@@ -220,7 +240,7 @@ export function PaymentSuccessClient() {
               Download as spreadsheet
             </Button>
           </div>
-          <Receipt payment={payment} student={CURRENT_STUDENT} />
+          <Receipt payment={payment} student={profile} />
         </motion.div>
       )}
     </div>

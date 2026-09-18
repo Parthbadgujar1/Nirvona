@@ -15,41 +15,105 @@ import { Switch } from "@/components/ui/checkbox";
 import { PageHeader } from "@/components/shared/page-header";
 import { ErrorState, LoadingState } from "@/components/shared/states";
 import { useAsync } from "@/hooks/use-async";
+import { useSession } from "@/hooks/use-session";
 import { studentService } from "@/services/student.service";
 import { INDIAN_STATES } from "@/data/site";
 import { formatDate } from "@/lib/format";
+import type { Student } from "@/types";
+
+type Prefs = NonNullable<Student["notificationPrefs"]>;
+const DEFAULT_PREFS: Prefs = { whatsapp: true, sms: true, email: true, portal: true };
+
+const PASSWORD_RULE = /^(?=.*[A-Z])(?=.*[0-9]).{8,}$/;
 
 export function ProfileView() {
   const student = useAsync(() => studentService.me(), []);
+  const { setSession } = useSession();
   const [saving, setSaving] = React.useState(false);
   // Unsaved edits layered over the loaded profile; null means "untouched".
   const [draft, setDraft] = React.useState<Record<string, string> | null>(null);
-  const [prefs, setPrefs] = React.useState({ whatsapp: true, sms: true, email: true, portal: true });
+  // Optimistic notification toggles; null means "use what the server has".
+  const [prefsDraft, setPrefsDraft] = React.useState<Prefs | null>(null);
+  const [passwords, setPasswords] = React.useState({ current: "", next: "", confirm: "" });
+  const [changingPassword, setChangingPassword] = React.useState(false);
 
   if (student.status === "error") return <ErrorState onRetry={student.reload} />;
   if (student.status === "loading" || !student.data) return <LoadingState label="Loading your profile" />;
 
   const data = student.data;
   const form = draft ?? {
-    fullName: data.fullName,
-    email: data.email,
-    mobile: data.mobile,
-    school: data.school,
-    city: data.city,
-    state: data.state,
+    fullName: data.fullName ?? "",
+    email: data.email ?? "",
+    mobile: data.mobile ?? "",
+    school: data.school ?? "",
+    city: data.city ?? "",
+    state: data.state ?? "",
     guardianName: data.guardianName ?? "",
     guardianMobile: data.guardianMobile ?? "",
     address: data.address ?? "",
   };
+  const prefs = prefsDraft ?? data.notificationPrefs ?? DEFAULT_PREFS;
   const setForm = (update: (prev: Record<string, string>) => Record<string, string>) =>
     setDraft((prev) => update(prev ?? form));
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
+    if (form.fullName.trim().length < 3) {
+      toast.error("Enter your full name.");
+      return;
+    }
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 900));
-    setSaving(false);
-    toast.success("Profile updated", { description: "Your changes have been saved." });
+    try {
+      const updated = await studentService.updateProfile(form);
+      // Keep the header / checkout details that read the stored session in sync.
+      setSession((prev) => (prev ? { ...prev, name: updated.fullName, email: updated.email } : prev));
+      setDraft(null);
+      student.reload();
+      toast.success("Profile updated", { description: "Your changes have been saved." });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save your profile.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function togglePref(key: keyof Prefs, value: boolean, label: string) {
+    const previous = prefs;
+    setPrefsDraft({ ...prefs, [key]: value });
+    try {
+      const updated = await studentService.updateProfile({ notificationPrefs: { [key]: value } });
+      setPrefsDraft(updated.notificationPrefs ?? null);
+      toast.success(`${label} ${value ? "enabled" : "disabled"}`);
+    } catch (error) {
+      setPrefsDraft(previous);
+      toast.error(error instanceof Error ? error.message : "Could not update your preference.");
+    }
+  }
+
+  async function changePassword(event: React.FormEvent) {
+    event.preventDefault();
+    if (!passwords.current) {
+      toast.error("Enter your current password.");
+      return;
+    }
+    if (!PASSWORD_RULE.test(passwords.next)) {
+      toast.error("New password must be at least 8 characters with a capital letter and a number.");
+      return;
+    }
+    if (passwords.next !== passwords.confirm) {
+      toast.error("New password and confirmation do not match.");
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await studentService.changePassword(passwords.current, passwords.next);
+      setPasswords({ current: "", next: "", confirm: "" });
+      toast.success("Password updated", { description: "Use your new password next time you sign in." });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update your password.");
+    } finally {
+      setChangingPassword(false);
+    }
   }
 
   return (
@@ -65,14 +129,14 @@ export function ProfileView() {
         <div className="min-w-0 flex-1">
           <h2 className="font-display text-xl font-bold text-navy-900">{data.fullName}</h2>
           <p className="mt-0.5 text-sm text-ink-500">
-            {data.className} · {data.school}
+            {[data.className, data.school].filter(Boolean).join(" · ")}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Badge tone="navy" size="sm">
               {data.id}
             </Badge>
-            <Badge tone="success" size="sm">
-              Account active
+            <Badge tone={data.status === "active" ? "success" : "neutral"} size="sm">
+              {data.status === "active" ? "Account active" : `Account ${data.status}`}
             </Badge>
             <Badge tone="neutral" size="sm">
               Member since {formatDate(data.enrolledAt)}
@@ -113,7 +177,12 @@ export function ProfileView() {
                 <Field label="Student ID" htmlFor="p-id" hint="Assigned by Nirvona — cannot be changed.">
                   <Input id="p-id" value={data.id} disabled />
                 </Field>
-                <Field label="Email address" htmlFor="p-email" required>
+                <Field
+                  label="Email address"
+                  htmlFor="p-email"
+                  required
+                  hint="This is also your sign-in email."
+                >
                   <Input
                     id="p-email"
                     type="email"
@@ -133,7 +202,7 @@ export function ProfileView() {
                   <Input id="p-dob" value={formatDate(data.dateOfBirth)} disabled />
                 </Field>
                 <Field label="Current class" htmlFor="p-class">
-                  <Input id="p-class" value={data.className} disabled />
+                  <Input id="p-class" value={data.className ?? ""} disabled />
                 </Field>
               </div>
             </Card>
@@ -167,6 +236,7 @@ export function ProfileView() {
                     value={form.state ?? ""}
                     onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))}
                   >
+                    <option value="">Select your state</option>
                     {INDIAN_STATES.map((s) => (
                       <option key={s} value={s}>
                         {s}
@@ -199,7 +269,7 @@ export function ProfileView() {
               </div>
 
               <div className="mt-6 flex justify-end border-t border-ink-100 pt-5">
-                <Button type="submit" size="lg" loading={saving}>
+                <Button type="submit" size="lg" loading={saving} disabled={!draft}>
                   <Save />
                   Save changes
                 </Button>
@@ -217,23 +287,35 @@ export function ProfileView() {
               <p className="mt-1 text-sm text-ink-500">
                 This password signs you in to the Nirvona website.
               </p>
-              <form
-                className="mt-5 space-y-4"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  toast.success("Password updated");
-                }}
-              >
+              <form className="mt-5 space-y-4" onSubmit={changePassword}>
                 <Field label="Current password" htmlFor="cur-pass" required>
-                  <Input id="cur-pass" type="password" autoComplete="current-password" />
+                  <Input
+                    id="cur-pass"
+                    type="password"
+                    autoComplete="current-password"
+                    value={passwords.current}
+                    onChange={(e) => setPasswords((p) => ({ ...p, current: e.target.value }))}
+                  />
                 </Field>
                 <Field label="New password" htmlFor="new-pass" required hint="At least 8 characters with a capital letter and a number.">
-                  <Input id="new-pass" type="password" autoComplete="new-password" />
+                  <Input
+                    id="new-pass"
+                    type="password"
+                    autoComplete="new-password"
+                    value={passwords.next}
+                    onChange={(e) => setPasswords((p) => ({ ...p, next: e.target.value }))}
+                  />
                 </Field>
                 <Field label="Confirm new password" htmlFor="conf-pass" required>
-                  <Input id="conf-pass" type="password" autoComplete="new-password" />
+                  <Input
+                    id="conf-pass"
+                    type="password"
+                    autoComplete="new-password"
+                    value={passwords.confirm}
+                    onChange={(e) => setPasswords((p) => ({ ...p, confirm: e.target.value }))}
+                  />
                 </Field>
-                <Button type="submit" size="md">
+                <Button type="submit" size="md" loading={changingPassword}>
                   <KeyRound />
                   Update password
                 </Button>
@@ -246,27 +328,6 @@ export function ProfileView() {
                 credentials are issued separately for each examination and printed on your admit
                 card. Nirvona will never ask you for either by phone or message.
               </Alert>
-
-              <Card className="p-6">
-                <h3 className="font-display text-base font-semibold text-navy-900">
-                  Recent account activity
-                </h3>
-                <ul className="mt-4 space-y-3">
-                  {[
-                    { label: "Signed in", detail: "Jaipur, IN · Chrome on macOS", time: "Today, 09:12 AM" },
-                    { label: "Admit card downloaded", detail: "CBT-04", time: "Yesterday, 06:40 PM" },
-                    { label: "Password changed", detail: "From the student portal", time: "12 Aug 2026" },
-                  ].map((item) => (
-                    <li key={item.label} className="flex items-start justify-between gap-3 border-b border-ink-100 pb-3 last:border-0 last:pb-0">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-navy-900">{item.label}</p>
-                        <p className="text-xs text-ink-500">{item.detail}</p>
-                      </div>
-                      <span className="shrink-0 text-xs text-ink-400">{item.time}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
             </div>
           </div>
         </TabsContent>
@@ -281,12 +342,14 @@ export function ProfileView() {
               other channels.
             </p>
             <ul className="mt-5 divide-y divide-ink-100">
-              {[
-                { key: "portal", label: "Portal notifications", detail: "Always on for exams and results", locked: true },
-                { key: "email", label: "Email", detail: "Admit cards, results and receipts" },
-                { key: "whatsapp", label: "WhatsApp", detail: "Exam reminders and admit card alerts" },
-                { key: "sms", label: "SMS", detail: "Critical exam-day updates only" },
-              ].map((channel) => (
+              {(
+                [
+                  { key: "portal", label: "Portal notifications", detail: "Always on for exams and results", locked: true },
+                  { key: "email", label: "Email", detail: "Admit cards, results and receipts" },
+                  { key: "whatsapp", label: "WhatsApp", detail: "Exam reminders and admit card alerts" },
+                  { key: "sms", label: "SMS", detail: "Critical exam-day updates only" },
+                ] as { key: keyof Prefs; label: string; detail: string; locked?: boolean }[]
+              ).map((channel) => (
                 <li key={channel.key} className="flex items-center justify-between gap-4 py-4">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-navy-900">{channel.label}</p>
@@ -294,12 +357,9 @@ export function ProfileView() {
                   </div>
                   <Switch
                     label={channel.label}
-                    checked={prefs[channel.key as keyof typeof prefs]}
+                    checked={prefs[channel.key]}
                     disabled={channel.locked}
-                    onCheckedChange={(v) => {
-                      setPrefs((p) => ({ ...p, [channel.key]: v }));
-                      toast.success(`${channel.label} ${v ? "enabled" : "disabled"}`);
-                    }}
+                    onCheckedChange={(v) => togglePref(channel.key, v, channel.label)}
                   />
                 </li>
               ))}

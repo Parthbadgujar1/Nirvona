@@ -12,7 +12,7 @@ import { FaqSection } from "@/components/public/faq-section";
 import { FinalCta } from "@/components/public/final-cta";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { StaggerGroup, StaggerItem } from "@/components/shared/states";
-import { COURSES } from "@/data/courses";
+import { useCourses } from "@/hooks/use-catalogue";
 import { usePageTitle } from "@/hooks/use-page-title";
 
 const FLOW = [
@@ -64,6 +64,7 @@ const CBT_FAQS = [
 ];
 
 export default function CbtPage() {
+  const { courses: COURSES } = useCourses();
   usePageTitle(
     "CBT Examinations",
     "How Nirvona computer-based testing works — from registration and admit card to the examination hall, evaluation, results and performance analysis.",
@@ -180,9 +181,10 @@ export default function CbtPage() {
                 </thead>
                 <tbody className="divide-y divide-ink-100 bg-white">
                   {COURSES.map((course) => {
-                    const q = course.examPattern.reduce((s, r) => s + r.questions, 0);
-                    const m = course.examPattern.reduce((s, r) => s + r.marks, 0);
-                    const duration = course.patternNotes[0].match(/(\d+)\s*minutes/)?.[1] ?? "180";
+                    const pattern = course.examPattern ?? [];
+                    const q = pattern.reduce((s, r) => s + r.questions, 0);
+                    const m = pattern.reduce((s, r) => s + r.marks, 0);
+                    const duration = (course.patternNotes ?? [])[0]?.match(/(\d+)\s*minutes/)?.[1] ?? "180";
                     return (
                       <tr key={course.slug} className="transition-colors hover:bg-ink-50/60">
                         <th scope="row" className="px-6 py-4 text-left">
@@ -197,7 +199,7 @@ export default function CbtPage() {
                         <td className="px-6 py-4 tabular text-ink-600">{m}</td>
                         <td className="px-6 py-4 tabular text-ink-600">{duration} min</td>
                         <td className="px-6 py-4 text-ink-600">
-                          +4 correct · {course.examPattern[0].negative}
+                          +4 correct · {pattern[0]?.negative ?? "-1"}
                         </td>
                       </tr>
                     );

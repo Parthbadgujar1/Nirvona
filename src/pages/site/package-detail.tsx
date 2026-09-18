@@ -10,7 +10,6 @@ import { FaqSection } from "@/components/public/faq-section";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { Breadcrumbs } from "@/components/shared/page-header";
 import { LoadingState } from "@/components/shared/states";
-import { getCourse } from "@/data/courses";
 import { formatCurrency } from "@/lib/format";
 import { GST_RATE } from "@/services/checkout.service";
 import { catalogueService } from "@/services/catalogue.service";
@@ -37,7 +36,11 @@ export default function PackageDetailPage() {
   // empty list until that's known.
   const pkgAsync = useAsync(() => (id ? catalogueService.getPackage(id) : Promise.resolve(undefined)), [id]);
   const pkg = pkgAsync.data;
-  const course = pkg ? getCourse(pkg.courseSlug) : undefined;
+  const courseAsync = useAsync(
+    () => (pkg ? catalogueService.getCourse(pkg.courseSlug) : Promise.resolve(undefined)),
+    [pkg?.courseSlug],
+  );
+  const course = courseAsync.data;
   const siblingsAsync = useAsync(
     () => (pkg ? catalogueService.packagesForCourse(pkg.courseSlug) : Promise.resolve([])),
     [pkg?.courseSlug],
@@ -45,7 +48,7 @@ export default function PackageDetailPage() {
 
   usePageTitle(pkg?.name ?? "Package not found", pkg?.tagline);
 
-  if (pkgAsync.status === "loading") {
+  if (pkgAsync.status === "loading" || (pkg && courseAsync.status === "loading")) {
     return <LoadingState label="Loading package" />;
   }
 
@@ -188,7 +191,7 @@ export default function PackageDetailPage() {
               <div className="mt-10">
                 <h2 className="font-display text-xl font-bold text-navy-900">Examination pattern</h2>
                 <p className="mt-2 text-sm text-ink-500">
-                  {totalQuestions} questions · {totalMarks} marks · {course.patternNotes[0]}
+                  {[totalQuestions > 0 ? `${totalQuestions} questions · ${totalMarks} marks` : null, course.patternNotes[0]].filter(Boolean).join(" · ")}
                 </p>
                 <div className="mt-5 overflow-hidden rounded-xl border border-ink-200">
                   <div className="nv-scroll overflow-x-auto">
@@ -225,6 +228,7 @@ export default function PackageDetailPage() {
               </div>
 
               {/* Syllabus */}
+              {course.syllabus.length > 0 && (
               <div className="mt-10">
                 <h2 className="font-display text-xl font-bold text-navy-900">Syllabus covered</h2>
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -245,6 +249,7 @@ export default function PackageDetailPage() {
                   ))}
                 </div>
               </div>
+              )}
             </div>
 
             {/* Sticky purchase panel */}
@@ -351,12 +356,14 @@ export default function PackageDetailPage() {
         </div>
       </section>
 
-      <FaqSection
-        faqs={course.faqs}
-        title={`${course.shortName} package questions`}
-        eyebrow="Before you buy"
-        className="section-pad bg-canvas"
-      />
+      {course.faqs.length > 0 && (
+        <FaqSection
+          faqs={course.faqs}
+          title={`${course.shortName} package questions`}
+          eyebrow="Before you buy"
+          className="section-pad bg-canvas"
+        />
+      )}
 
       <section className="border-t border-ink-200 bg-white py-14">
         <div className="container-nv">

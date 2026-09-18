@@ -26,9 +26,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/states";
 import { useAsync } from "@/hooks/use-async";
 import { adminService } from "@/services/admin.service";
-import { COURSES } from "@/data/courses";
-import { getPackage } from "@/data/packages";
-import { STUDENTS } from "@/data/students";
+import { useCourses, usePackages } from "@/hooks/use-catalogue";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { exportRows, timestampedName } from "@/lib/export";
 import type { Payment } from "@/types";
@@ -43,6 +41,12 @@ const EXPORT_COLUMNS = [
 
 export function PurchasesManager() {
   const payments = useAsync(() => adminService.payments(), []);
+  // Real students (mobile/email for the export) and the live catalogue -
+  // this screen used to look both up in bundled mock arrays, so exports
+  // had blank contact columns for every real student.
+  const students = useAsync(() => adminService.students(), []);
+  const { courses: COURSES } = useCourses();
+  const { getPackage } = usePackages();
 
   const [search, setSearch] = React.useState("");
   const [filters, setFilters] = React.useState<Record<string, string>>({
@@ -61,7 +65,7 @@ export function PurchasesManager() {
   }
 
   const all = payments.data;
-  const student = (id: string) => STUDENTS.find((s) => s.id === id);
+  const student = (id: string) => students.data?.find((s) => s.id === id);
 
   const filtered = all.filter((payment) => {
     if (filters.course !== "all" && payment.courseSlug !== filters.course) return false;

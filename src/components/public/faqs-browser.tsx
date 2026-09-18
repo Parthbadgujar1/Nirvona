@@ -5,11 +5,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { SearchBar } from "@/components/shared/filters";
 import { EmptyState } from "@/components/shared/states";
 import { HOME_FAQS } from "@/data/site";
-import { COURSES } from "@/data/courses";
+import { useCourses } from "@/hooks/use-catalogue";
 import { cn } from "@/lib/utils";
-import type { FAQ } from "@/types";
+import type { Course, FAQ } from "@/types";
 
-const CATEGORIES: { id: string; label: string; faqs: FAQ[] }[] = [
+const buildCategories = (COURSES: Course[]): { id: string; label: string; faqs: FAQ[] }[] => [
   { id: "general", label: "General", faqs: HOME_FAQS },
   {
     id: "payments",
@@ -47,12 +47,14 @@ const CATEGORIES: { id: string; label: string; faqs: FAQ[] }[] = [
     id: "programs",
     label: "Programs",
     faqs: COURSES.flatMap((course) =>
-      course.faqs.map((faq) => ({ q: `${course.shortName}: ${faq.q}`, a: faq.a })),
+      (course.faqs ?? []).map((faq) => ({ q: `${course.shortName}: ${faq.q}`, a: faq.a })),
     ),
   },
 ];
 
 export function FaqsBrowser() {
+  const { courses } = useCourses();
+  const CATEGORIES = React.useMemo(() => buildCategories(courses), [courses]);
   const [category, setCategory] = React.useState("general");
   const [query, setQuery] = React.useState("");
 

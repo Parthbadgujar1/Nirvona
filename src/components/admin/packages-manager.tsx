@@ -24,7 +24,6 @@ import { DataTable, type Column } from "@/components/shared/data-table";
 import { FilterBar } from "@/components/shared/filters";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/states";
-import { PAYMENTS } from "@/data/payments";
 import { useAsync } from "@/hooks/use-async";
 import { adminService } from "@/services/admin.service";
 import { formatCurrency, formatNumber } from "@/lib/format";
@@ -42,6 +41,7 @@ const EMPTY_DRAFT = {
   discountPercent: "",
   tests: "6",
   recommended: false,
+  status: "active",
   tagline: "",
   features: "",
   benefits: "",
@@ -62,6 +62,8 @@ function linesToList(value: string): string[] {
 export function PackagesManager() {
   const packagesAsync = useAsync(() => adminService.packages(), []);
   const courses = useAsync(() => adminService.courses(), []);
+  // Real orders - "Sold" and revenue used to be counted from bundled mock payments.
+  const paymentsAsync = useAsync(() => adminService.payments(), []);
   const [search, setSearch] = React.useState("");
   const [filters, setFilters] = React.useState<Record<string, string>>({ course: "all", duration: "all" });
   const [formOpen, setFormOpen] = React.useState(false);
@@ -78,6 +80,7 @@ export function PackagesManager() {
   const PACKAGES = packagesAsync.data;
   const COURSES = courses.data ?? [];
 
+  const PAYMENTS = paymentsAsync.data ?? [];
   const salesFor = (id: string) =>
     PAYMENTS.filter((p) => p.packageId === id && p.status === "successful").length;
 
@@ -107,6 +110,7 @@ export function PackagesManager() {
       discountPercent: pkg.discountPercent ? String(pkg.discountPercent) : "",
       tests: String(pkg.tests),
       recommended: Boolean(pkg.recommended),
+      status: pkg.status ?? "active",
       tagline: pkg.tagline ?? "",
       features: (pkg.features ?? []).join("\n"),
       benefits: (pkg.benefits ?? []).join("\n"),
@@ -141,6 +145,7 @@ export function PackagesManager() {
         discountPercent: draft.discountPercent ? Number(draft.discountPercent) : 0,
         tests: Number(draft.tests) || 0,
         recommended: draft.recommended,
+        status: draft.status,
         tagline: draft.tagline || null,
         features: linesToList(draft.features),
         benefits: linesToList(draft.benefits),
@@ -253,7 +258,11 @@ export function PackagesManager() {
       key: "recommended",
       header: "Flags",
       cell: (row) =>
-        row.recommended ? (
+        row.status === "inactive" ? (
+          <Badge tone="neutral" size="sm">
+            Inactive
+          </Badge>
+        ) : row.recommended ? (
           <Badge tone="ember" size="sm">
             <Sparkles aria-hidden />
             Recommended
@@ -478,6 +487,21 @@ export function PackagesManager() {
                   </Select>
                 </Field>
               </div>
+
+              <Field
+                label="Status"
+                htmlFor="p-status"
+                hint="Inactive packages disappear from the website and student portal and can no longer be purchased."
+              >
+                <Select
+                  id="p-status"
+                  value={draft.status}
+                  onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value }))}
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </Select>
+              </Field>
 
               <Field label="Tagline" htmlFor="p-tagline">
                 <Input
