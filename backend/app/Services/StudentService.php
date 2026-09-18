@@ -175,10 +175,11 @@ class StudentService extends BaseService
                 }
 
                 // Only fields a student may legitimately change themselves -
-                // className, status, enrolledAt, passwordHash etc. are
-                // deliberately excluded (admins change those via AdminService).
+                // id, status, enrolledAt, passwordHash etc. are deliberately
+                // excluded (the student id is assigned once and never edited;
+                // admins change the rest via AdminService).
                 $allowedFields = [
-                    'fullName', 'email', 'mobile', 'dateOfBirth', 'gender',
+                    'fullName', 'email', 'mobile', 'dateOfBirth', 'className', 'gender',
                     'school', 'city', 'state', 'address',
                     'guardianName', 'guardianMobile', 'notificationPrefs',
                 ];
@@ -210,6 +211,28 @@ class StudentService extends BaseService
                 }
                 if (array_key_exists('mobile', $updateData) && !preg_match($phone, $updateData['mobile'])) {
                     $errors['mobile'] = 'Enter a valid mobile number.';
+                }
+                if (array_key_exists('dateOfBirth', $updateData)) {
+                    $dob = \DateTime::createFromFormat('Y-m-d', (string) $updateData['dateOfBirth']);
+                    if (!$dob || $dob->format('Y-m-d') !== $updateData['dateOfBirth']) {
+                        $errors['dateOfBirth'] = 'Enter a valid date of birth.';
+                    } else {
+                        $age = $dob->diff(new \DateTime('today'))->y;
+                        if ($dob > new \DateTime('today') || $age < 12 || $age > 40) {
+                            $errors['dateOfBirth'] = 'Enter a date of birth between 12 and 40 years of age.';
+                        }
+                    }
+                }
+                if (array_key_exists('className', $updateData)) {
+                    // Keep whatever an admin may have set before; otherwise
+                    // accept only the classes the registration form offers.
+                    $allowedClasses = ['Class 11', 'Class 12', 'Dropper', 'Other'];
+                    if (
+                        !in_array($updateData['className'], $allowedClasses, true)
+                        && $updateData['className'] !== ($student['className'] ?? null)
+                    ) {
+                        $errors['className'] = 'Choose a valid class.';
+                    }
                 }
                 if (
                     !empty($updateData['guardianMobile'] ?? '')

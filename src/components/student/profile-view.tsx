@@ -24,6 +24,8 @@ import type { Student } from "@/types";
 type Prefs = NonNullable<Student["notificationPrefs"]>;
 const DEFAULT_PREFS: Prefs = { whatsapp: true, sms: true, email: true, portal: true };
 
+const CLASS_OPTIONS = ["Class 11", "Class 12", "Dropper", "Other"];
+
 const PASSWORD_RULE = /^(?=.*[A-Z])(?=.*[0-9]).{8,}$/;
 
 export function ProfileView() {
@@ -45,6 +47,8 @@ export function ProfileView() {
     fullName: data.fullName ?? "",
     email: data.email ?? "",
     mobile: data.mobile ?? "",
+    dateOfBirth: (data.dateOfBirth ?? "").slice(0, 10),
+    className: data.className ?? "",
     school: data.school ?? "",
     city: data.city ?? "",
     state: data.state ?? "",
@@ -60,6 +64,10 @@ export function ProfileView() {
     event.preventDefault();
     if (form.fullName.trim().length < 3) {
       toast.error("Enter your full name.");
+      return;
+    }
+    if (!form.dateOfBirth) {
+      toast.error("Enter your date of birth.");
       return;
     }
     setSaving(true);
@@ -199,10 +207,26 @@ export function ProfileView() {
                   />
                 </Field>
                 <Field label="Date of birth" htmlFor="p-dob" hint="Printed on your admit card.">
-                  <Input id="p-dob" value={formatDate(data.dateOfBirth)} disabled />
+                  <Input
+                    id="p-dob"
+                    type="date"
+                    value={form.dateOfBirth ?? ""}
+                    max={new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => setForm((f) => ({ ...f, dateOfBirth: e.target.value }))}
+                  />
                 </Field>
                 <Field label="Current class" htmlFor="p-class">
-                  <Input id="p-class" value={data.className ?? ""} disabled />
+                  <Select
+                    id="p-class"
+                    value={form.className ?? ""}
+                    onChange={(e) => setForm((f) => ({ ...f, className: e.target.value }))}
+                  >
+                    {CLASS_OPTIONS.concat(
+                      data.className && !CLASS_OPTIONS.includes(data.className) ? [data.className] : [],
+                    ).map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </Select>
                 </Field>
               </div>
             </Card>
