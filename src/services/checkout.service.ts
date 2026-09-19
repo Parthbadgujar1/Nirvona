@@ -122,6 +122,12 @@ export const checkoutService = {
     await loadRazorpayScript();
 
     return new Promise<Payment>((resolvePromise, reject) => {
+      // Razorpay lets the customer retry inside its window after a failed
+      // attempt (wrong OTP, declined card, bank page "failure"), and a later
+      // success still calls `handler`. So a failed attempt must NOT end the
+      // checkout - remember why it failed and only report it if they close
+      // the window without paying.
+      let lastFailure: string | undefined;
       if (!window.Razorpay) {
         reject(new ApiError("Payment gateway failed to load.", 500, "gateway_load_failed"));
         return;
@@ -169,12 +175,17 @@ export const checkoutService = {
             .catch(reject);
         },
         modal: {
-          ondismiss: () => reject(new ApiError("Payment was cancelled.", 499, "payment_cancelled")),
+          ondismiss: () =>
+            reject(
+              lastFailure
+                ? new ApiError(lastFailure, 402, "payment_declined")
+                : new ApiError("Payment was cancelled.", 499, "payment_cancelled"),
+            ),
         },
       });
 
       rzp.on("payment.failed", (response) => {
-        reject(new ApiError(response.error.description || "Your bank declined the transaction.", 402, "payment_declined"));
+        lastFailure = response.error.description || "Your bank declined the transaction.";
       });
 
       hooks?.onOpen?.();
