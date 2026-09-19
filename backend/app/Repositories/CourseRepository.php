@@ -73,7 +73,7 @@ class CourseRepository extends BaseRepository
         $stmt = $this->db->prepare(
             "INSERT INTO {$this->table} ({$columns}) VALUES ({$placeholders})"
         );
-        $stmt->execute(array_values($data));
+        $stmt->execute(self::bindable(array_values($data)));
 
         return $this->findBySlug($data['slug']);
     }
@@ -99,7 +99,7 @@ class CourseRepository extends BaseRepository
         $stmt = $this->db->prepare(
             "UPDATE {$this->table} SET {$set}, updatedAt = NOW() WHERE slug = ?"
         );
-        return $stmt->execute($values);
+        return $stmt->execute(self::bindable($values));
     }
 
     /**

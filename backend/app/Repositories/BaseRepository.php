@@ -72,9 +72,22 @@ abstract class BaseRepository
         $stmt = $this->db->prepare(
             "INSERT INTO {$this->table} ({$columns}) VALUES ({$placeholders}) RETURNING *"
         );
-        $stmt->execute(array_values($data));
+        $stmt->execute(self::bindable(array_values($data)));
 
         return ColumnCase::normalize($stmt->fetch(PDO::FETCH_ASSOC));
+    }
+
+    /**
+     * PDO's pgsql driver sends PHP `false` as an empty string, which
+     * Postgres rejects for BOOLEAN columns ("invalid input syntax for type
+     * boolean"). Send booleans as the literals Postgres understands.
+     *
+     * @param array<int, mixed> $values
+     * @return array<int, mixed>
+     */
+    protected static function bindable(array $values): array
+    {
+        return array_map(fn($v) => is_bool($v) ? ($v ? 'true' : 'false') : $v, $values);
     }
 
     /**
@@ -92,6 +105,7 @@ abstract class BaseRepository
 
         $set = implode(', ', array_map(fn($k) => "{$k} = ?", array_keys($data)));
         $values = array_values($data);
+        $values = self::bindable($values);
         $values[] = $id;
 
         $stmt = $this->db->prepare(
