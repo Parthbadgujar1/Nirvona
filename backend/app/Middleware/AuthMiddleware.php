@@ -42,6 +42,13 @@ class AuthMiddleware implements MiddlewareInterface
             return $this->unauthorizedResponse('Invalid or expired token');
         }
 
+        if (
+            ($claims['role'] ?? null) === 'student'
+            && \Nirvona\Support\TokenRevocation::isRevoked((string) ($claims['sub'] ?? ''))
+        ) {
+            return $this->unauthorizedResponse('Account is not active');
+        }
+
         $request = $request
             ->withAttribute('userId', $claims['sub'] ?? null)
             ->withAttribute('role', $claims['role'] ?? null)

@@ -58,7 +58,10 @@ class JwtService
         try {
             $decoded = JWT::decode($token, new Key($config['secret'], $config['algorithm']));
             return (array) $decoded;
-        } catch (ExpiredException | SignatureInvalidException | \UnexpectedValueException | \InvalidArgumentException $e) {
+        } catch (\Throwable $e) {
+            // Expired, bad signature, malformed, wrong algorithm, undecodable
+            // JSON... every one of them just means "not a valid token" (401),
+            // never a crash.
             return null;
         }
     }

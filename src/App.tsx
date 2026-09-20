@@ -1,5 +1,7 @@
 import { lazy, Suspense } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { prefetchLikelyPages } from "@/lib/prefetch";
 
 import { SiteLayout } from "@/layouts/SiteLayout";
 import { AuthLayout } from "@/layouts/AuthLayout";
@@ -91,10 +93,20 @@ const StudentProfilePage = lazy(() => import("@/pages/student/profile"));
  * Next.js (parens = organization only) and don't need an equivalent
  * here; their shared chrome is just a nested layout route instead.
  */
+/** Warms the next pages' code once the browser is idle (see lib/prefetch.ts). */
+function RoutePrefetcher() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    prefetchLikelyPages(pathname);
+  }, [pathname]);
+  return null;
+}
+
 export function App() {
   return (
     <Suspense fallback={<LoadingState label="Loading" />}>
       <ScrollToTop />
+      <RoutePrefetcher />
       <Routes>
         <Route element={<SiteLayout />}>
           <Route path="/" element={<HomePage />} />

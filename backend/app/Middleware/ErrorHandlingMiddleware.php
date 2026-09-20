@@ -109,9 +109,10 @@ class ErrorHandlingMiddleware implements MiddlewareInterface
             $error['code'] = 'INVALID_REQUEST';
             $error['message'] = $e->getMessage();
         } elseif ($e instanceof \RuntimeException) {
+            // Internal detail (DB/Redis/gateway errors) goes to the log
+            // above, never to the client.
             $statusCode = 500;
             $error['code'] = 'SERVICE_ERROR';
-            $error['message'] = $e->getMessage();
         }
 
         $body = [

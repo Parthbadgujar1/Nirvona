@@ -15,12 +15,22 @@ use Psr\Http\Server\RequestHandlerInterface as RequestHandler;
  */
 class CORSMiddleware implements MiddlewareInterface
 {
-    private array $allowedOrigins = [
-        'http://localhost:3000',
-        'http://localhost:3001',
-        // Add production domains here
-        // 'https://nirvona.example.com',
-    ];
+    /** @var string[] */
+    private array $allowedOrigins;
+
+    public function __construct()
+    {
+        // FRONTEND_URL plus any comma-separated CORS_ORIGINS (production domains),
+        // plus the local dev servers when running in development.
+        $origins = array_filter(array_map('trim', array_merge(
+            [$_ENV['FRONTEND_URL'] ?? ''],
+            explode(',', $_ENV['CORS_ORIGINS'] ?? '')
+        )));
+        if (($_ENV['APP_ENV'] ?? 'production') === 'development') {
+            $origins = array_merge($origins, ['http://localhost:3000', 'http://localhost:3001']);
+        }
+        $this->allowedOrigins = array_values(array_unique(array_map(fn($o) => rtrim($o, '/'), $origins)));
+    }
 
     public function process(Request $request, RequestHandler $handler): Response
     {

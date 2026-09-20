@@ -4,6 +4,8 @@ import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { App } from "./App";
+import "@fontsource-variable/inter/wght.css";
+import "@fontsource-variable/plus-jakarta-sans/wght.css";
 import "./index.css";
 
 // Replaces src/app/layout.tsx (Next.js root layout) - the

@@ -6,6 +6,7 @@ use Nirvona\Controllers\{
     ExamController,
     ResultController,
     AdmitCardController,
+    ExamCredentialController,
     PaymentController,
     StudentResponseController,
     NotificationController
@@ -109,6 +110,10 @@ return function (App $app) {
         // static route registered after a variable route that could
         // also match it - see the api.php/student.php load-order note
         // in public/index.php for the same issue at the top level).
+        $group->get('/exams/{examId}/credential', $withId(ExamCredentialController::class, 'getForStudent'));
+        $group->get('/admit-cards', $withId(AdmitCardController::class, 'listByStudent'));
+        $group->get('/topic-performance', $withId(ResultController::class, 'getTopicPerformance'));
+
         $group->get('/notifications', $withId(NotificationController::class, 'listForStudent'));
         $group->get('/notifications/unread-count', $withId(NotificationController::class, 'unreadCount'));
         $group->put('/notifications/read-all', $withId(NotificationController::class, 'markAllRead'));

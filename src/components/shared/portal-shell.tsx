@@ -67,11 +67,21 @@ export function PortalShell({
     }
   }, [hydrated, session, navigate, pathname, search]);
 
-  if (!session) {
+  // A signed-in student who types /admin/... (or an admin who opens
+  // /student/...) must not get the other portal's shell - the server would
+  // refuse their data anyway, this stops the page from rendering at all.
+  const wrongPortal = Boolean(session) && session!.role !== role;
+  React.useEffect(() => {
+    if (wrongPortal && session) {
+      navigate(session.role === "admin" ? "/admin/dashboard" : "/student/dashboard", { replace: true });
+    }
+  }, [wrongPortal, session, navigate]);
+
+  if (!session || wrongPortal) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-navy-950">
         <p className="text-sm text-white/60">
-          {hydrated ? "Redirecting to sign in…" : "Loading…"}
+          {hydrated ? "Redirecting…" : "Loading…"}
         </p>
       </div>
     );
@@ -291,12 +301,6 @@ export function PortalShell({
                     </Link>
                   </DropdownItem>
                   <DropdownSeparator />
-                  <DropdownItem asChild>
-                    <Link to={role === "admin" ? "/student/dashboard" : "/admin/dashboard"}>
-                      <X className="rotate-45" />
-                      Switch to {role === "admin" ? "student" : "admin"} demo
-                    </Link>
-                  </DropdownItem>
                   <DropdownItem destructive onSelect={() => void signOut()}>
                     <LogOut />
                     Logout

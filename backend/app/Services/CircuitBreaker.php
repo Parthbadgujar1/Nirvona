@@ -43,7 +43,14 @@ class CircuitBreaker
      */
     public function execute(string $serviceName, callable $callable, mixed $fallback = null): mixed
     {
-        $state = $this->getState($serviceName);
+        // Redis is only where the breaker remembers its state. If it is
+        // unreachable, behave as a closed circuit (just call the service)
+        // instead of failing the request.
+        try {
+            $state = $this->getState($serviceName);
+        } catch (\Throwable) {
+            return $callable();
+        }
 
         // If circuit is open, return fallback immediately (don't call service)
         if ($state === self::STATE_OPEN) {
@@ -57,24 +64,33 @@ class CircuitBreaker
 
         try {
             $result = $callable();
-
-            // Success! Reset the circuit
-            $this->recordSuccess($serviceName);
-            $this->setState($serviceName, self::STATE_CLOSED);
-
-            return $result;
         } catch (\Exception $e) {
-            // Failure! Record it
-            $failureCount = $this->recordFailure($serviceName);
-
-            // If too many failures, open the circuit
-            if ($failureCount >= self::FAILURE_THRESHOLD) {
-                $this->setState($serviceName, self::STATE_OPEN);
-                $this->setOpenTime($serviceName);
+            // The operation itself failed: count it, maybe open the circuit.
+            try {
+                $failureCount = $this->recordFailure($serviceName);
+                if ($failureCount >= self::FAILURE_THRESHOLD) {
+                    $this->setState($serviceName, self::STATE_OPEN);
+                    $this->setOpenTime($serviceName);
+                }
+            } catch (\Throwable) {
+                // Redis unavailable: still return the fallback below.
             }
 
             return $fallback ?? $this->getFallbackResponse($serviceName);
         }
+
+        // Success. Bookkeeping is best-effort and only needed when the circuit
+        // was recovering (the failure counter expires on its own), so the
+        // common healthy path makes no extra Redis writes.
+        if ($state !== self::STATE_CLOSED) {
+            try {
+                $this->recordSuccess($serviceName);
+                $this->setState($serviceName, self::STATE_CLOSED);
+            } catch (\Throwable) {
+            }
+        }
+
+        return $result;
     }
 
     /**

@@ -26,6 +26,15 @@ class ResultController
     public function get(Request $request, Response $response, array $args): Response
     {
         $result = $this->resultService->getResult($args['id']);
+        // A result belongs to one student: anyone else (even signed in) gets
+        // the same "not found" as a missing id, so ids can't be probed.
+        if (
+            $result['success']
+            && $request->getAttribute('role') !== 'admin'
+            && ($result['data']['studentId'] ?? null) !== $request->getAttribute('userId')
+        ) {
+            $result = ['success' => false, 'error' => 'Unable to fetch result'];
+        }
         $statusCode = $result['success'] ? 200 : 404;
         $response->getBody()->write(json_encode($result));
         return $response->withStatus($statusCode)->withHeader('Content-Type', 'application/json');

@@ -23,19 +23,19 @@
     />
     <meta property="og:type" content="website" />
 
-    <!-- Next.js previously self-hosted Inter/Plus Jakarta Sans via
-         next/font/google (auto @font-face + CSS variable injection).
-         Same two families/weights here via Google Fonts directly -
-         index.css defines --font-inter/--font-jakarta from these. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Fonts are self-hosted (@fontsource-variable, imported in src/main.tsx):
+         no third-party request chain blocking first paint. -->
+    <link rel="preconnect" href="%VITE_API_BASE_URL%" crossorigin />
+    <style>
+      /* Shown instantly, before any JavaScript arrives; React replaces it. */
+      .boot{display:flex;min-height:100dvh;align-items:center;justify-content:center;background:#fff}
+      .boot span{width:34px;height:34px;border-radius:50%;border:3px solid #e3e6ef;border-top-color:#0e1d4a;animation:boot-spin .8s linear infinite}
+      @keyframes boot-spin{to{transform:rotate(360deg)}}
+      @media (prefers-reduced-motion:reduce){.boot span{animation-duration:2.4s}}
+    </style>
   </head>
   <body class="min-h-dvh antialiased">
-    <div id="root"></div>
+    <div id="root"><div class="boot" role="status" aria-label="Loading"><span></span></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

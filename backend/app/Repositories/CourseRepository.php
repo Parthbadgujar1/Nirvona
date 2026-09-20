@@ -67,7 +67,7 @@ class CourseRepository extends BaseRepository
     public function create(array $data): array
     {
         $data = $this->encodeJsonColumns($data);
-        $columns = implode(', ', array_keys($data));
+        $columns = implode(', ', self::columnNames($data));
         $placeholders = implode(', ', array_fill(0, count($data), '?'));
 
         $stmt = $this->db->prepare(
@@ -92,7 +92,7 @@ class CourseRepository extends BaseRepository
         }
 
         $data = $this->encodeJsonColumns($data);
-        $set = implode(', ', array_map(fn($k) => "{$k} = ?", array_keys($data)));
+        $set = implode(', ', array_map(fn($k) => "{$k} = ?", self::columnNames($data)));
         $values = array_values($data);
         $values[] = $slug;
 

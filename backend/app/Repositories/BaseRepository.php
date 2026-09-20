@@ -66,7 +66,7 @@ abstract class BaseRepository
      */
     public function create(array $data): array
     {
-        $columns = implode(', ', array_keys($data));
+        $columns = implode(', ', self::columnNames($data));
         $placeholders = implode(', ', array_fill(0, count($data), '?'));
 
         $stmt = $this->db->prepare(
@@ -75,6 +75,26 @@ abstract class BaseRepository
         $stmt->execute(self::bindable(array_values($data)));
 
         return ColumnCase::normalize($stmt->fetch(PDO::FETCH_ASSOC));
+    }
+
+    /**
+     * Column names are interpolated into INSERT/UPDATE text (only *values*
+     * can be bound), and the keys of `$data` can originate from a JSON
+     * request body. Anything that is not a plain identifier is refused, so a
+     * crafted key like `name = 'x', role` can never become SQL.
+     *
+     * @param array<string, mixed> $data
+     * @return string[]
+     */
+    protected static function columnNames(array $data): array
+    {
+        $names = array_keys($data);
+        foreach ($names as $name) {
+            if (!is_string($name) || !preg_match('/^[A-Za-z_][A-Za-z0-9_]{0,62}$/', $name)) {
+                throw new \InvalidArgumentException('Invalid field name.');
+            }
+        }
+        return $names;
     }
 
     /**
@@ -103,7 +123,7 @@ abstract class BaseRepository
             return false;
         }
 
-        $set = implode(', ', array_map(fn($k) => "{$k} = ?", array_keys($data)));
+        $set = implode(', ', array_map(fn($k) => "{$k} = ?", self::columnNames($data)));
         $values = array_values($data);
         $values = self::bindable($values);
         $values[] = $id;

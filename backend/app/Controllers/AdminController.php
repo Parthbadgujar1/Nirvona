@@ -229,7 +229,9 @@ class AdminController
     {
         $params = $request->getQueryParams();
         $page = max(1, (int) ($params['page'] ?? 1));
-        $pageSize = min(100, max(1, (int) ($params['pageSize'] ?? 20)));
+        // Admin-only endpoints: a page may be large so the admin screens (which
+        // search/sort the whole list in the browser) need only a few requests.
+        $pageSize = min(1000, max(1, (int) ($params['pageSize'] ?? 20)));
         return [$page, $pageSize];
     }
 }

@@ -88,6 +88,51 @@ export class ApiError extends Error {
 const inFlightGets = new Map<string, Promise<unknown>>();
 
 /**
+ * Short-lived cache of successful GET responses, so moving between pages
+ * (dashboard -> programs -> back) does not re-download data the app fetched
+ * a moment ago. Deliberately brief and self-clearing:
+ *  - the public catalogue lives a little longer (it changes rarely and the
+ *    server also caches it for ~10 s),
+ *  - signed-in data only a few seconds,
+ *  - ANY write (POST/PUT/DELETE) empties the whole cache, and so does signing
+ *    in or out, so a page never shows something the user just changed.
+ * Keyed per token, so one account's data is never served to another.
+ */
+const responseCache = new Map<string, { at: number; data: unknown }>();
+const PUBLIC_TTL_MS = 20_000;
+const PRIVATE_TTL_MS = 6_000;
+const MAX_CACHE_ENTRIES = 200;
+
+const isPublicCatalogue = (endpoint: string) =>
+  /^\/(courses|packages|subjects)(\/|$|\?)/.test(endpoint);
+
+export function clearApiCache(): void {
+  responseCache.clear();
+}
+
+/** Same-tab signal the session hook listens to (see use-local-storage.ts). */
+const STORAGE_SYNC_EVENT = "nirvona:storage-sync";
+
+/**
+ * The backend rejected our token (expired, revoked because the account was
+ * deactivated, or signed with a rotated secret). Drop the stored session so
+ * the portal shell sends the user back to sign in, instead of leaving them
+ * on a page where every request fails.
+ */
+function handleUnauthorized(): void {
+  if (typeof window === "undefined") return;
+  responseCache.clear();
+  try {
+    if (window.localStorage.getItem(SESSION_STORAGE_KEY)) {
+      window.localStorage.removeItem(SESSION_STORAGE_KEY);
+      window.dispatchEvent(new CustomEvent(STORAGE_SYNC_EVENT, { detail: { key: SESSION_STORAGE_KEY } }));
+    }
+  } catch {
+    /* storage unavailable - nothing to clear */
+  }
+}
+
+/**
  * Fetch wrapper with error handling and response transformation
  */
 async function fetchApi<T>(
@@ -99,12 +144,42 @@ async function fetchApi<T>(
   const token = getStoredToken();
   const dedupeKey = method === "GET" ? `${token ?? ""}:${endpoint}` : null;
 
+  if (method !== "GET") {
+    // Any write may change what a GET returns: never serve a stale copy after it.
+    responseCache.clear();
+    return fetchApiUncached<T>(endpoint, options, fallbackData, token).finally(() => responseCache.clear());
+  }
+
   if (dedupeKey) {
+    const cached = responseCache.get(dedupeKey);
+    const ttl = isPublicCatalogue(endpoint) ? PUBLIC_TTL_MS : PRIVATE_TTL_MS;
+    if (cached && Date.now() - cached.at < ttl) {
+      // A copy, so a component that sorts/mutates its result can't corrupt the cache.
+      return structuredClone(cached.data) as T;
+    }
     const existing = inFlightGets.get(dedupeKey);
     if (existing) return existing as Promise<T>;
   }
 
-  const request = fetchApiUncached<T>(endpoint, options, fallbackData, token);
+  // A read that hits the server's rate limit (many tabs, a busy shared network)
+  // is retried once after a short pause instead of showing an error screen.
+  const attempt = () => fetchApiUncached<T>(endpoint, options, fallbackData, token);
+  const withRetry = () =>
+    attempt().catch(async (error: unknown) => {
+      if (error instanceof ApiError && error.status === 429) {
+        await new Promise((r) => setTimeout(r, 1500));
+        return attempt();
+      }
+      throw error;
+    });
+
+  const request = withRetry().then((data) => {
+    if (dedupeKey) {
+      if (responseCache.size >= MAX_CACHE_ENTRIES) responseCache.clear();
+      responseCache.set(dedupeKey, { at: Date.now(), data: structuredClone(data) });
+    }
+    return data;
+  });
 
   if (dedupeKey) {
     inFlightGets.set(dedupeKey, request);
@@ -128,6 +203,8 @@ async function fetchApiUncached<T>(
   options: RequestInit | undefined,
   fallbackData: T | undefined,
   token: string | null,
+  /** Return the whole {success, data, meta} envelope instead of just `data` (used for paging). */
+  envelope = false,
 ): Promise<T> {
   try {
     const url = `${API_BASE_URL}${endpoint}`;
@@ -148,6 +225,7 @@ async function fetchApiUncached<T>(
       // always replaced by the generic, useless "API Error: Bad Request"
       // before the caller ever saw it.
       const body = await response.json().catch(() => null);
+      if (response.status === 401 && token) handleUnauthorized();
       const message = extractErrorMessage(body) || `API Error: ${response.statusText}`;
       throw new ApiError(
         message,
@@ -167,6 +245,7 @@ async function fetchApiUncached<T>(
           extractErrorCode(data) ?? "api_error",
         );
       }
+      if (envelope) return data as T;
       // Extract data from response envelope if present
       if ("data" in data && "success" in data) {
         return data.data as T;
@@ -212,6 +291,77 @@ export async function resolve<T>(
 
   // Try to fetch from backend API with mock data as fallback
   return fetchApi(endpoint, options, data);
+}
+
+/**
+ * Every row of a paginated list endpoint (the admin lists for students,
+ * payments, enrolments...).
+ *
+ * The API returns 20 rows per page by default and reports the real total in
+ * `meta.total`. Screens that call `get("/admin/students")` and ignore that
+ * silently show only the first 20 of, say, 1,000 students - and search or
+ * filter only within those 20. This reads the total from the first page,
+ * fetches the remaining pages a few at a time, and returns them all, so the
+ * existing search/sort/filter tables keep working over the complete list.
+ */
+export async function getAllPages<T extends { id?: string }>(
+  endpoint: string,
+  { pageSize = 500, maxRows = 20_000 }: { pageSize?: number; maxRows?: number } = {},
+): Promise<T[]> {
+  const token = getStoredToken();
+  const cacheKey = `${token ?? ""}:ALL:${endpoint}`;
+  const cached = responseCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < PRIVATE_TTL_MS) return structuredClone(cached.data) as T[];
+  // Several components on one screen often ask for the same list at once:
+  // share the single load instead of downloading it once per component.
+  const existing = inFlightGets.get(cacheKey);
+  if (existing) return (await existing) as T[];
+
+  const load = (async () => {
+    const sep = endpoint.includes("?") ? "&" : "?";
+    const page = (n: number) =>
+      fetchApiUncached<{ data: T[]; meta?: { total?: number } }>(
+        `${endpoint}${sep}page=${n}&pageSize=${pageSize}`,
+        undefined,
+        undefined,
+        token,
+        true,
+      );
+
+    const first = await page(1);
+    const rows: T[] = [...(first.data ?? [])];
+    const total = Math.min(first.meta?.total ?? rows.length, maxRows);
+    const pages = Math.ceil(total / pageSize);
+
+    const rest = Array.from({ length: Math.max(0, pages - 1) }, (_, i) => i + 2);
+    for (let i = 0; i < rest.length; i += 4) {
+      const batch = await Promise.all(rest.slice(i, i + 4).map(page));
+      for (const b of batch) rows.push(...(b.data ?? []));
+    }
+
+    // A row inserted while we were paging can shift a boundary: drop duplicates.
+    const seen = new Set<string>();
+    const unique = rows.filter((r) => {
+      if (!r.id) return true;
+      if (seen.has(r.id)) return false;
+      seen.add(r.id);
+      return true;
+    });
+
+    if (responseCache.size >= MAX_CACHE_ENTRIES) responseCache.clear();
+    responseCache.set(cacheKey, { at: Date.now(), data: structuredClone(unique) });
+    return unique;
+  })();
+
+  inFlightGets.set(cacheKey, load);
+  load.finally(() => inFlightGets.delete(cacheKey)).catch(() => {});
+  return load;
+}
+
+/** `resolve()` for paginated lists: mock data in mock mode, otherwise every page from the API. */
+export async function resolveAll<T extends { id?: string }>(data: T[], endpoint: string): Promise<T[]> {
+  if (USE_MOCK_DATA) return structuredClone(data);
+  return getAllPages<T>(endpoint);
 }
 
 /**

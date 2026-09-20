@@ -28,19 +28,22 @@ class Cache
         $port = $_ENV['REDIS_PORT'] ?? 6379;
         $database = $_ENV['REDIS_DATABASE'] ?? 0;
 
-        try {
-            self::$redis = new RedisClient([
-                'scheme' => 'tcp',
-                'host' => $host,
-                'port' => $port,
-                'database' => $database,
-            ]);
-
-            // Test connection
-            self::$redis->ping();
-        } catch (\Exception $e) {
-            throw new \RuntimeException("Redis connection failed: " . $e->getMessage());
-        }
+        // Predis connects lazily (on the first command), so building the
+        // client costs nothing and a dead Redis no longer takes the whole API
+        // down at boot. Short timeouts keep a dead Redis from stalling every
+        // request - callers treat Redis as an optimisation and fail open.
+        // 127.0.0.1 rather than "localhost": on Windows "localhost" tries IPv6
+        // first and waits ~2s before falling back, on every request.
+        self::$redis = new RedisClient([
+            'scheme' => 'tcp',
+            'host' => $host,
+            'port' => $port,
+            'database' => $database,
+            'timeout' => 0.5,
+            'read_write_timeout' => 1.0,
+            // Reuse the TCP connection across requests within a PHP worker.
+            'persistent' => true,
+        ]);
 
         return self::$redis;
     }

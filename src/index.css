@@ -10,8 +10,8 @@
    (replacing next/font/google's self-hosted @font-face + CSS variable
    injection) - same two families and weights. */
 :root {
-  --font-inter: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-jakarta: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-inter: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-jakarta: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
 @theme {

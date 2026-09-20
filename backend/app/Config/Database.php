@@ -38,6 +38,12 @@ class Database
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
+                // Opening a Postgres connection costs 30-55 ms (auth handshake) -
+                // more than the rest of a typical request. A persistent connection
+                // is kept by the PHP worker and reused by the next request (~3 ms),
+                // and PDO rolls back any transaction left open at request end.
+                // Set DB_PERSISTENT=false to opt out (e.g. behind some poolers).
+                PDO::ATTR_PERSISTENT => filter_var($_ENV['DB_PERSISTENT'] ?? 'true', FILTER_VALIDATE_BOOLEAN),
             ]);
         } catch (\PDOException $e) {
             throw new \RuntimeException("Database connection failed: " . $e->getMessage());

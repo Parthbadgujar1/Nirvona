@@ -79,8 +79,13 @@ class PaymentService extends BaseService
         // stop being purchasable immediately - the public listing already
         // hides it, this stops a stale page/direct API call too.
         if (!empty($data['packageId'])) {
-            $existing = $this->packageRepository->getById($data['packageId']);
-            if ($existing && ($existing['status'] ?? 'active') !== 'active') {
+            // A malformed id (someone editing the checkout URL) is simply "not found".
+            $isUuid = (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', (string) $data['packageId']);
+            $existing = $isUuid ? $this->packageRepository->getById($data['packageId']) : null;
+            if (!$existing) {
+                return $this->failure('package_not_found', 'This package could not be found.', false);
+            }
+            if (($existing['status'] ?? 'active') !== 'active') {
                 return $this->failure('package_unavailable', 'This package is no longer available.', false);
             }
         }

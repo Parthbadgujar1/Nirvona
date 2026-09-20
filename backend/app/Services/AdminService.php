@@ -430,6 +430,8 @@ class AdminService extends BaseService
                 }
 
                 $this->studentRepository->update($id, ['status' => 'inactive']);
+                // Cut off any session they already have, right now.
+                \Nirvona\Support\TokenRevocation::revoke($id);
                 $this->auditLog('DEACTIVATE', 'Student', $id, []);
 
                 return ['success' => true, 'message' => 'Student deactivated successfully'];
@@ -454,6 +456,7 @@ class AdminService extends BaseService
                 }
 
                 $this->studentRepository->update($id, ['status' => 'active']);
+                \Nirvona\Support\TokenRevocation::restore($id);
                 $this->auditLog('REACTIVATE', 'Student', $id, []);
 
                 return ['success' => true, 'message' => 'Student reactivated successfully'];

@@ -32,7 +32,7 @@ import type {
   AnswerKey, AnswerKeyEntry, AppNotification, Course, Exam, ExamCentre, Package, Payment, Student,
   UploadValidationResult,
 } from "@/types";
-import { resolve, post, put, del } from "./http";
+import { resolve, resolveAll, post, put, del } from "./http";
 
 /**
  * Admin Service - Backend Integrated
@@ -61,14 +61,14 @@ export const adminService = {
     ),
 
   // Students & Enrollments
-  students: (): Promise<Student[]> => resolve(STUDENTS, "/admin/students"),
+  students: (): Promise<Student[]> => resolveAll(STUDENTS, "/admin/students"),
   updateStudent: (id: string, payload: Record<string, unknown>): Promise<Student> =>
     put(`/admin/students/${id}`, payload),
   deactivateStudent: (id: string): Promise<void> => post(`/admin/students/${id}/deactivate`, {}),
   reactivateStudent: (id: string): Promise<void> => post(`/admin/students/${id}/reactivate`, {}),
-  payments: (): Promise<Payment[]> => resolve(PAYMENTS, "/admin/payments"),
+  payments: (): Promise<Payment[]> => resolveAll(PAYMENTS, "/admin/payments"),
   refundPayment: (id: string): Promise<Payment> => post(`/admin/payments/${id}/refund`, {}),
-  enrollments: () => resolve(ENROLLMENTS, "/admin/enrollments"),
+  enrollments: () => resolveAll(ENROLLMENTS, "/admin/enrollments"),
 
   // Catalogue: Courses & Packages
   courses: (): Promise<Course[]> => resolve(COURSES, "/admin/courses"),
@@ -83,7 +83,7 @@ export const adminService = {
   deletePackage: (id: string): Promise<void> => del(`/admin/packages/${id}`),
 
   // Exams & Centres
-  exams: () => resolve(EXAMS, "/admin/exams"),
+  exams: () => resolveAll(EXAMS, "/admin/exams"),
   exam: (id: string) => resolve(getExam(id), `/admin/exams/${id}`),
   createExam: (payload: Record<string, unknown>): Promise<Exam> => post("/admin/exams", payload),
   updateExam: (id: string, payload: Record<string, unknown>): Promise<Exam> =>

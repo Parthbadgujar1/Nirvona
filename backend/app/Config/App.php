@@ -56,9 +56,20 @@ class App
      */
     public static function getJWT(): array
     {
+        $secret = $_ENV['JWT_SECRET'] ?? '';
+        $weak = strlen($secret) < 32 || str_contains(strtolower($secret), 'your-secret');
+
+        // A guessable signing secret lets anyone mint a valid token for any
+        // account (including admin). Refuse to sign or verify with one unless
+        // this is an explicit development environment.
+        if ($weak && ($_ENV['APP_ENV'] ?? 'production') !== 'development') {
+            throw new \RuntimeException('JWT_SECRET is missing or too weak (need 32+ random characters).');
+        }
+
         return [
-            'secret' => $_ENV['JWT_SECRET'] ?? 'your-secret-key',
-            'algorithm' => $_ENV['JWT_ALGORITHM'] ?? 'HS256',
+            'secret' => $secret !== '' ? $secret : 'dev-only-insecure-secret-change-me',
+            // Pinned: never let the environment downgrade to "none"/weaker algorithms.
+            'algorithm' => 'HS256',
             'expiration' => (int)($_ENV['JWT_EXPIRATION'] ?? 3600),
         ];
     }

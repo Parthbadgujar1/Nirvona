@@ -1,5 +1,5 @@
 import type { Role } from "@/types";
-import { ApiError, postEnvelope } from "./http";
+import { ApiError, clearApiCache, postEnvelope } from "./http";
 
 export interface LoginRequest {
   email?: string;
@@ -72,6 +72,9 @@ export const authService = {
       throw new ApiError("Enter a valid email/mobile and password.", 401, "invalid_credentials");
     }
 
+    // A fresh sign-in must never be served the previous account's cached data.
+    clearApiCache();
+
     try {
       const res = await postEnvelope<LoginEnvelope>("/auth/login", {
         email: identifier,
@@ -122,6 +125,8 @@ export const authService = {
    * the entire logout; no network call needed.
    */
   logout: async () => {
+    // Nothing of the previous account's data may linger for the next one.
+    clearApiCache();
     return { ok: true };
   },
 };
