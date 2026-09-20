@@ -36,7 +36,7 @@ class ExamCandidateService extends BaseService
     public function getByExam(string $examId): array
     {
         return $this->executeWithFallback(
-            fn() => ['success' => true, 'data' => $this->examCandidateRepository->getByExam($examId)],
+            fn() => ['success' => true, 'data' => $this->examCandidateRepository->getRosterByExam($examId)],
             ['success' => true, 'data' => []],
             'getCandidatesByExam'
         );

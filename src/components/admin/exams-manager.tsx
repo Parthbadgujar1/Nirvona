@@ -140,13 +140,10 @@ export function ExamsManager() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-display text-base font-bold text-navy-900">
-                          {exam.id}
+                          {exam.name}
                         </span>
                         <StatusBadge kind="exam" status={exam.status} size="sm" />
                       </div>
-                      <p className="mt-1 truncate text-sm text-ink-600">
-                        {exam.name.split("· ")[1] ?? exam.name}
-                      </p>
                       <ul className="mt-2 flex flex-wrap gap-1.5">
                         <li>
                           <Badge tone="neutral" size="sm">
@@ -221,11 +218,11 @@ export function ExamsManager() {
                     <dl className="grid gap-4 sm:grid-cols-2">
                       {[
                         { label: "Date", value: formatDate(exam.date, "full") },
-                        { label: "Reporting", value: exam.reportingTime },
-                        { label: "Exam time", value: exam.examTime },
+                        { label: "Reporting", value: exam.reportingTime || "Not set" },
+                        { label: "Exam time", value: exam.examTime || "Not set" },
                         { label: "Pattern", value: `${exam.totalQuestions} Q · ${exam.totalMarks} marks` },
                         { label: "Centre", value: centre ? `${centre.city} (${centre.code})` : "—" },
-                        { label: "Scope", value: exam.syllabusScope },
+                        { label: "Scope", value: exam.syllabusScope || "Full syllabus" },
                       ].map((item) => (
                         <div key={item.label} className="min-w-0">
                           <dt className="text-2xs font-bold uppercase tracking-wider text-ink-400">
@@ -274,7 +271,7 @@ export function ExamsManager() {
                     <Button asChild size="sm">
                       <Link to={`/admin/exams/${exam.id}`}>
                         <Users />
-                        {formatNumber(exam.candidates)} candidates
+                        {formatNumber(exam.candidates)} candidate{exam.candidates === 1 ? "" : "s"}
                       </Link>
                     </Button>
                     <Button asChild variant="secondary" size="sm">

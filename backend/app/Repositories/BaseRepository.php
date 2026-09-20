@@ -44,7 +44,10 @@ abstract class BaseRepository
     public function getAll(int $limit = 100, int $offset = 0): array
     {
         $stmt = $this->db->prepare(
-            "SELECT * FROM {$this->table} LIMIT ? OFFSET ?"
+            // A stable order matters: the admin screens read these lists page by
+            // page, and LIMIT/OFFSET without ORDER BY can repeat or skip rows
+            // between pages. Newest first, `id` breaks ties.
+            "SELECT * FROM {$this->table} ORDER BY createdAt DESC, id LIMIT ? OFFSET ?"
         );
         $stmt->execute([$limit, $offset]);
         return ColumnCase::normalizeAll($stmt->fetchAll(PDO::FETCH_ASSOC));

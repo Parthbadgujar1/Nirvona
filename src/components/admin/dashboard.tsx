@@ -2,15 +2,12 @@
 
 import { Link } from "react-router-dom";
 import {
-  Activity, ArrowRight, Award, CalendarClock, CreditCard, FileCheck2, IdCard, KeyRound,
-  ShoppingCart, TrendingUp, UserPlus, Users, Wallet,
+  ArrowRight, Award, CalendarClock, CreditCard, FileCheck2, IdCard, KeyRound, ShoppingCart, TrendingUp, Users, Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ProgressBar } from "@/components/ui/progress";
 import { StatCard } from "@/components/shared/stat-card";
-import { StatusBadge } from "@/components/shared/status-badge";
 import { PageHeader } from "@/components/shared/page-header";
 import { ErrorState, LoadingState, Reveal } from "@/components/shared/states";
 import {
@@ -18,21 +15,13 @@ import {
 } from "@/components/charts";
 import { useAsync } from "@/hooks/use-async";
 import { adminService } from "@/services/admin.service";
-import { formatCurrency, formatDate, formatNumber, relativeTime } from "@/lib/format";
-
-const TODAY = new Date();
+import { formatCurrency, formatDate, formatNumber } from "@/lib/format";
+import { ExamReadinessCard } from "@/components/admin/exam-readiness-card";
+import { RecentActivityCard } from "@/components/admin/recent-activity-card";
 
 /** Presentation-only - the backend returns course names/counts, not colors. */
 const COURSE_COLORS = ["#ea4108", "#10b981", "#0e1d4a", "#2563eb", "#f59e0b", "#7c3aed"];
 
-const ACTIVITY_ICON = {
-  purchase: ShoppingCart,
-  exam: CalendarClock,
-  result: Award,
-  credential: KeyRound,
-  "admit-card": IdCard,
-  student: UserPlus,
-} as const;
 
 export function AdminDashboard() {
   const stats = useAsync(() => adminService.stats(), []);
@@ -47,10 +36,6 @@ export function AdminDashboard() {
   if (stats.status === "loading" || !stats.data) return <LoadingState label="Loading admin overview" />;
 
   const data = stats.data;
-  const upcomingExams = (exams.data ?? []).filter((e) =>
-    ["scheduled", "admit-card-available", "draft"].includes(e.status),
-  );
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -224,138 +209,8 @@ export function AdminDashboard() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_1fr]">
-        {/* Upcoming exams operations */}
-        <Card className="overflow-hidden">
-          <div className="flex items-center justify-between gap-3 border-b border-ink-100 p-5">
-            <div>
-              <h2 className="font-display text-base font-semibold text-navy-900">
-                Examination readiness
-              </h2>
-              <p className="mt-1 text-xs text-ink-500">
-                Admit card and credential coverage for upcoming examinations.
-              </p>
-            </div>
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/admin/exams">
-                All exams
-                <ArrowRight />
-              </Link>
-            </Button>
-          </div>
-
-          {exams.status === "loading" ? (
-            <div className="p-5">
-              <LoadingState label="Loading examinations" />
-            </div>
-          ) : (
-            <ul className="divide-y divide-ink-100">
-              {upcomingExams.map((exam) => {
-                const admitPct = exam.candidates ? (exam.admitCardsGenerated / exam.candidates) * 100 : 0;
-                const credPct = exam.candidates ? (exam.credentialsAssigned / exam.candidates) * 100 : 0;
-                return (
-                  <li key={exam.id} className="p-5">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-display text-sm font-bold text-navy-900">
-                            {exam.id}
-                          </span>
-                          <StatusBadge kind="exam" status={exam.status} size="sm" />
-                        </div>
-                        <p className="mt-0.5 truncate text-xs text-ink-500">
-                          {formatDate(exam.date, "full")} · {formatNumber(exam.candidates)}{" "}
-                          candidates
-                        </p>
-                      </div>
-                      <Button asChild variant="secondary" size="xs">
-                        <Link to={`/admin/exams/${exam.id}`}>Manage</Link>
-                      </Button>
-                    </div>
-
-                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                      <div>
-                        <div className="mb-1.5 flex items-center justify-between text-xs">
-                          <span className="text-ink-500">Admit cards</span>
-                          <span className="font-semibold tabular text-navy-900">
-                            {formatNumber(exam.admitCardsGenerated)} / {formatNumber(exam.candidates)}
-                          </span>
-                        </div>
-                        <ProgressBar
-                          value={admitPct}
-                          size="sm"
-                          tone={admitPct === 100 ? "success" : admitPct > 0 ? "ember" : "warning"}
-                          label={`${exam.id} admit cards`}
-                        />
-                      </div>
-                      <div>
-                        <div className="mb-1.5 flex items-center justify-between text-xs">
-                          <span className="text-ink-500">Credentials</span>
-                          <span className="font-semibold tabular text-navy-900">
-                            {formatNumber(exam.credentialsAssigned)} / {formatNumber(exam.candidates)}
-                          </span>
-                        </div>
-                        <ProgressBar
-                          value={credPct}
-                          size="sm"
-                          tone={credPct === 100 ? "success" : credPct > 0 ? "ember" : "warning"}
-                          label={`${exam.id} credentials`}
-                        />
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </Card>
-
-        {/* Recent activity */}
-        <Card className="overflow-hidden">
-          <div className="flex items-center justify-between gap-3 border-b border-ink-100 p-5">
-            <div className="flex items-center gap-2.5">
-              <Activity className="size-4 text-ember-600" aria-hidden />
-              <h2 className="font-display text-base font-semibold text-navy-900">Recent activity</h2>
-            </div>
-            <Badge tone="neutral" size="sm">
-              Live
-            </Badge>
-          </div>
-
-          {activity.status === "loading" ? (
-            <div className="p-5">
-              <LoadingState label="Loading activity" />
-            </div>
-          ) : (
-            <ul className="divide-y divide-ink-100">
-              {(activity.data ?? []).map((item) => {
-                const Icon = ACTIVITY_ICON[item.type];
-                return (
-                  <li key={item.id} className="flex gap-3 p-4">
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-canvas text-ink-500">
-                      <Icon className="size-4" aria-hidden />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm leading-snug text-ink-700">
-                        <span className="font-semibold text-navy-900">{item.actor}</span>{" "}
-                        {item.action}{" "}
-                        <span className="font-medium text-navy-900">{item.target}</span>
-                      </p>
-                      <p className="mt-0.5 text-xs text-ink-400">
-                        {relativeTime(item.at, TODAY)}
-                      </p>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-
-          <div className="border-t border-ink-100 p-4">
-            <Button asChild variant="secondary" size="sm" block>
-              <Link to="/admin/notifications">View notification log</Link>
-            </Button>
-          </div>
-        </Card>
+        <ExamReadinessCard exams={exams.data} loading={exams.status === "loading"} />
+        <RecentActivityCard items={activity.data} loading={activity.status === "loading"} />
       </div>
 
       {/* Quick actions */}

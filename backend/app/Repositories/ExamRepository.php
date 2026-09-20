@@ -30,6 +30,34 @@ class ExamRepository extends BaseRepository
      *
      * @return array Upcoming exams
      */
+    /**
+     * Admin exam list with LIVE readiness counts.
+     *
+     * `candidates`, `admitCardsGenerated` and `credentialsAssigned` used to be
+     * read from counter columns that the code tried to keep in step (and never
+     * did for credentials: nothing ever updated `credentialsAssigned`, so the
+     * dashboard's "Credentials" bar always read 0). Counting the real rows here
+     * means the numbers can never drift from the data behind them.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getAll(int $limit = 100, int $offset = 0): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT e.*,
+                    (SELECT COUNT(*) FROM exam_candidates ec WHERE ec.examId = e.id) AS candidates,
+                    (SELECT COUNT(*) FROM admit_cards ac
+                      WHERE ac.examId = e.id AND ac.status IN ('generated', 'published', 'sent')) AS admitCardsGenerated,
+                    (SELECT COUNT(*) FROM exam_credentials xc
+                      WHERE xc.examId = e.id AND xc.status <> 'revoked') AS credentialsAssigned
+             FROM {$this->table} e
+             ORDER BY e.date DESC, e.id
+             LIMIT ? OFFSET ?"
+        );
+        $stmt->execute([$limit, $offset]);
+        return ColumnCase::normalizeAll($stmt->fetchAll(\PDO::FETCH_ASSOC));
+    }
+
     public function getUpcoming(): array
     {
         return $this->select(
@@ -74,9 +102,19 @@ class ExamRepository extends BaseRepository
         // entirely instead of aggregating across a second join.
         return $this->selectOne(
             "SELECT e.*,
-                    ec.name as centreName,
-                    ec.address as centreAddress,
-                    (SELECT COUNT(*) FROM exam_candidates WHERE examId = e.id) as candidateCount
+                    ec.name AS centreName,
+                    ec.address AS centreAddress,
+                    ec.city AS centreCity,
+                    ec.state AS centreState,
+                    ec.pincode AS centrePincode,
+                    ec.capacity AS centreCapacity,
+                    ec.labs AS centreLabs,
+                    (SELECT COUNT(*) FROM exam_candidates WHERE examId = e.id)::int AS candidateCount,
+                    (SELECT COUNT(*) FROM exam_candidates WHERE examId = e.id)::int AS candidates,
+                    (SELECT COUNT(*) FROM admit_cards
+                      WHERE examId = e.id AND status IN ('generated', 'published', 'sent'))::int AS admitCardsGenerated,
+                    (SELECT COUNT(*) FROM exam_credentials
+                      WHERE examId = e.id AND status <> 'revoked')::int AS credentialsAssigned
              FROM {$this->table} e
              LEFT JOIN exam_centres ec ON e.centreId = ec.id
              WHERE e.id = ?",

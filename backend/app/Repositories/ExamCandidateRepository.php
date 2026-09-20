@@ -26,6 +26,33 @@ class ExamCandidateRepository extends BaseRepository
     }
 
     /**
+     * The candidate roster for the admin exam page, with each candidate's REAL
+     * state: their name from the student record, and whether an admit card /
+     * credential actually exists for them.
+     *
+     * The status columns on exam_candidates itself are copies that nothing
+     * keeps up to date (they read "pending" forever, and `studentName` was
+     * never filled in), so this reads the source tables instead.
+     */
+    public function getRosterByExam(string $examId): array
+    {
+        return $this->select(
+            "SELECT ec.id, ec.studentId, ec.examId, ec.attendance, ec.createdAt, ec.updatedAt,
+                    COALESCE(s.fullName, ec.studentName) AS studentName,
+                    COALESCE(ac.seatNo, ec.seatNo) AS seatNo,
+                    COALESCE(ac.status, 'pending') AS admitCardStatus,
+                    COALESCE(xc.status, 'pending') AS credentialStatus
+             FROM {$this->table} ec
+             LEFT JOIN students s ON s.id = ec.studentId
+             LEFT JOIN admit_cards ac ON ac.studentId = ec.studentId AND ac.examId = ec.examId
+             LEFT JOIN exam_credentials xc ON xc.studentId = ec.studentId AND xc.examId = ec.examId
+             WHERE ec.examId = ?
+             ORDER BY COALESCE(ac.seatNo, ec.seatNo) ASC NULLS LAST, s.fullName ASC",
+            [$examId]
+        );
+    }
+
+    /**
      * Get a student's candidacy across all exams
      *
      * @param string $studentId

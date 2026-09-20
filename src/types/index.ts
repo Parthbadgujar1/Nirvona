@@ -181,6 +181,14 @@ export interface Exam {
   admitCardsGenerated: number;
   credentialsAssigned: number;
   syllabusScope: string;
+  // Present on the single-exam (detail) response, from the exam's centre.
+  centreName?: string | null;
+  centreAddress?: string | null;
+  centreCity?: string | null;
+  centreState?: string | null;
+  centrePincode?: string | null;
+  centreCapacity?: number | null;
+  centreLabs?: number | null;
 }
 
 export interface ExamCentre {

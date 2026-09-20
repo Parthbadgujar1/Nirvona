@@ -16,7 +16,6 @@ import { FilterBar } from "@/components/shared/filters";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/states";
 import { useAsync } from "@/hooks/use-async";
 import { adminService } from "@/services/admin.service";
-import { getCentre } from "@/data/exams";
 import { formatDate, formatNumber } from "@/lib/format";
 import { exportRows, timestampedName } from "@/lib/export";
 import type { ExamCandidate } from "@/types";
@@ -48,7 +47,6 @@ export function ExamCandidates({ examId }: { examId: string }) {
   }
 
   const data = exam.data;
-  const centre = getCentre(data.centreId);
   const rows = candidates.data ?? [];
 
   const filtered = rows.filter((row) => {
@@ -101,18 +99,21 @@ export function ExamCandidates({ examId }: { examId: string }) {
     },
   ];
 
-  const admitPending = data.candidates - data.admitCardsGenerated;
-  const credPending = data.candidates - data.credentialsAssigned;
+  const admitPending = Math.max(0, data.candidates - data.admitCardsGenerated);
+  const credPending = Math.max(0, data.candidates - data.credentialsAssigned);
+  // Coverage as a percentage; an exam with no candidates yet is 0%, not NaN.
+  const coverage = (done: number) => (data.candidates ? Math.min(100, (done / data.candidates) * 100) : 0);
+  const capacity = data.centreCapacity ?? 0;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`${data.id} · Candidates`}
-        description={data.name}
+        title={data.name}
+        description="Candidates, admit cards and credentials for this examination."
         breadcrumbs={[
           { label: "Dashboard", href: "/admin/dashboard" },
           { label: "Exams", href: "/admin/exams" },
-          { label: data.id },
+          { label: data.name },
         ]}
         actions={
           <>
@@ -121,7 +122,7 @@ export function ExamCandidates({ examId }: { examId: string }) {
               size="md"
               onClick={() => {
                 exportRows(
-                  timestampedName(`Nirvona_Candidates_${data.id}`),
+                  timestampedName(`Nirvona_Candidates_${data.name.replace(/[^A-Za-z0-9]+/g, "_")}`),
                   filtered as unknown as Record<string, unknown>[],
                   [
                     { key: "studentId", header: "Student ID" },
@@ -153,8 +154,8 @@ export function ExamCandidates({ examId }: { examId: string }) {
           <dl className="grid gap-4 sm:grid-cols-2">
             {[
               { label: "Exam date", value: formatDate(data.date, "full") },
-              { label: "Reporting time", value: data.reportingTime },
-              { label: "Exam time", value: data.examTime },
+              { label: "Reporting time", value: data.reportingTime || "Not set" },
+              { label: "Exam time", value: data.examTime || "Not set" },
               { label: "Pattern", value: `${data.totalQuestions} questions · ${data.totalMarks} marks` },
             ].map((item) => (
               <div key={item.label}>
@@ -171,12 +172,33 @@ export function ExamCandidates({ examId }: { examId: string }) {
               <MapPin className="size-4 text-ember-600" aria-hidden />
               <p className="text-2xs font-bold uppercase tracking-wider text-ink-400">Centre</p>
             </div>
-            <p className="mt-2 text-sm font-semibold text-navy-900">{centre?.name}</p>
-            <p className="mt-0.5 text-xs leading-relaxed text-ink-500">
-              {centre?.address}, {centre?.city} — {centre?.pincode}
-              <br />
-              Capacity {centre?.capacity} across {centre?.labs} labs
-            </p>
+            {data.centreName ? (
+              <>
+                <p className="mt-2 text-sm font-semibold text-navy-900">{data.centreName}</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-ink-500">
+                  {[data.centreAddress, data.centreCity].filter(Boolean).join(", ")}
+                  {data.centrePincode ? ` — ${data.centrePincode}` : ""}
+                  {capacity > 0 && (
+                    <>
+                      <br />
+                      Capacity {formatNumber(capacity)}
+                      {data.centreLabs ? ` across ${data.centreLabs} labs` : ""}
+                    </>
+                  )}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-2 text-sm font-semibold text-navy-900">No centre assigned yet</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-ink-500">
+                  Choose an examination centre from{" "}
+                  <Link to="/admin/exams" className="font-semibold text-royal-700 hover:underline">
+                    the exams list
+                  </Link>{" "}
+                  (Edit exam).
+                </p>
+              </>
+            )}
           </div>
         </div>
       </Card>
@@ -199,10 +221,10 @@ export function ExamCandidates({ examId }: { examId: string }) {
         />
         <StatCard
           label="Centre utilisation"
-          value={`${Math.round((data.candidates / (centre?.capacity ?? 1)) * 100)}%`}
+          value={capacity > 0 ? `${Math.round((data.candidates / capacity) * 100)}%` : "—"}
           icon={MapPin}
           accent="success"
-          hint={`${formatNumber(data.candidates)} of ${centre?.capacity} seats`}
+          hint={capacity > 0 ? `${formatNumber(data.candidates)} of ${formatNumber(capacity)} seats` : "No centre assigned"}
         />
       </div>
 
@@ -215,7 +237,7 @@ export function ExamCandidates({ examId }: { examId: string }) {
             </span>
           </div>
           <ProgressBar
-            value={(data.admitCardsGenerated / data.candidates) * 100}
+            value={coverage(data.admitCardsGenerated)}
             tone="royal"
             label="Admit card coverage"
           />
@@ -232,7 +254,7 @@ export function ExamCandidates({ examId }: { examId: string }) {
             </span>
           </div>
           <ProgressBar
-            value={(data.credentialsAssigned / data.candidates) * 100}
+            value={coverage(data.credentialsAssigned)}
             tone="ember"
             label="Credential coverage"
           />
@@ -287,14 +309,10 @@ export function ExamCandidates({ examId }: { examId: string }) {
           columns={columns}
           rows={filtered}
           rowKey={(row) => row.studentId}
-          caption={`Candidates for ${data.id}`}
+          caption={`Candidates for ${data.name}`}
         />
       )}
 
-      <p className="text-xs text-ink-400">
-        Showing a representative sample of the {formatNumber(data.candidates)} assigned candidates.
-        A production build paginates this list from the API.
-      </p>
     </div>
   );
 }
