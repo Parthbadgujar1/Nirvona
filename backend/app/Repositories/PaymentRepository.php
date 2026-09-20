@@ -18,7 +18,7 @@ class PaymentRepository extends BaseRepository
      * has no use for on their own. Plain `SELECT *` here previously
      * left `packageName`/`studentName`/`duration` undefined on every
      * payment the frontend rendered - visible as a payment history row
-     * whose "package" column showed the gateway method ("razorpay")
+     * whose "package" column showed the gateway method (a gateway id)
      * instead of a package name, because that was the only string on
      * the row the table happened to have a value for. */
     private const JOIN_SQL = "
@@ -62,6 +62,23 @@ class PaymentRepository extends BaseRepository
              LIMIT ? OFFSET ?",
             [$limit, $offset]
         );
+    }
+
+    /**
+     * Flip a payment to "successful" exactly once. The conditional UPDATE
+     * means that when the status poll and the gateway webhook both notice
+     * the payment at the same moment, only one of them gets `true` back -
+     * and only that one goes on to enroll the student.
+     */
+    public function markSuccessfulOnce(string $id, string $transactionId, string $method): bool
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE {$this->table}
+             SET status = 'successful', transactionId = ?, method = ?, updatedAt = NOW()
+             WHERE id = ? AND status <> 'successful'"
+        );
+        $stmt->execute([$transactionId, $method, $id]);
+        return $stmt->rowCount() === 1;
     }
 
     /**

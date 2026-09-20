@@ -55,7 +55,7 @@ Nirvona/
 - **Responsive Design**: Tailwind CSS + Radix UI components
 - **Type Safety**: Full TypeScript coverage
 - **Authentication**: Secure login/register flows
-- **Payment Integration**: Razorpay gateway ready
+- **Payment Integration**: PhonePe payment gateway (hosted checkout, server-verified)
 
 ### 🚀 Backend (PHP MVC) - Enterprise Grade
 - **Error Isolation**: Services fail independently without crashing system
@@ -159,7 +159,7 @@ return $this->executeWithFallback(
 ```
 
 ### Circuit Breaker Pattern
-Prevents cascade failures when external services (Razorpay, etc.) are down:
+Prevents cascade failures when external services (PhonePe, etc.) are down:
 
 ```
 CLOSED (Normal Operation)

@@ -64,15 +64,24 @@ class App
     }
 
     /**
-     * Get Razorpay gateway configuration
+     * Get PhonePe payment gateway configuration
      *
-     * @return array{keyId: string, keySecret: string}
+     * Credentials come from the PhonePe Business dashboard
+     * (Developer Settings). `environment` is "sandbox" for testing
+     * (default) or "production" for live payments. The two base-url
+     * overrides exist only so tests can point at a stub server.
+     *
+     * @return array{clientId: string, clientSecret: string, clientVersion: string, environment: string, apiBase: ?string, authBase: ?string}
      */
-    public static function getRazorpay(): array
+    public static function getPhonePe(): array
     {
         return [
-            'keyId' => $_ENV['RAZORPAY_KEY_ID'] ?? '',
-            'keySecret' => $_ENV['RAZORPAY_KEY_SECRET'] ?? '',
+            'clientId' => $_ENV['PHONEPE_CLIENT_ID'] ?? '',
+            'clientSecret' => $_ENV['PHONEPE_CLIENT_SECRET'] ?? '',
+            'clientVersion' => $_ENV['PHONEPE_CLIENT_VERSION'] ?? '1',
+            'environment' => $_ENV['PHONEPE_ENV'] ?? 'sandbox',
+            'apiBase' => ($_ENV['PHONEPE_API_BASE'] ?? '') ?: null,
+            'authBase' => ($_ENV['PHONEPE_AUTH_BASE'] ?? '') ?: null,
         ];
     }
 

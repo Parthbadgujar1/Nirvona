@@ -85,12 +85,11 @@ return function (App $app) {
         $group->get('/dashboard', $withId(StudentController::class, 'getDashboard'));
         $group->get('/enrollments', $withId(StudentController::class, 'getEnrollments'));
         $group->get('/payments', $withId(PaymentController::class, 'getStudentPayments'));
-        // Razorpay checkout: order is created against the authenticated
-        // student (id injected from the JWT, never the client), verify
-        // just needs the paymentId from the URL - both routes are
-        // already inside this AuthMiddleware-wrapped group.
+        // PhonePe checkout: the order is created against the authenticated
+        // student (id injected from the JWT, never the client), and verify
+        // also gets that id so it can refuse someone else's payment.
         $group->post('/payments/order', $withId(PaymentController::class, 'createOrder'));
-        $group->post('/payments/{paymentId}/verify', [PaymentController::class, 'verify']);
+        $group->post('/payments/{paymentId}/verify', $withId(PaymentController::class, 'verify'));
         $group->get('/exams', [ExamController::class, 'list']);
         $group->get('/results', $withId(ResultController::class, 'getStudentResults'));
         $group->get('/results/latest', $withId(ResultController::class, 'getLatestForStudent'));

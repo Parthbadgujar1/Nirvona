@@ -333,7 +333,7 @@ class AdminService extends BaseService
      * touch the student's enrollment/access, which is a separate manual
      * step (revoking access on refund is a real product decision that
      * shouldn't happen silently as a side effect of a status change).
-     * Actually issuing the refund through Razorpay happens outside this
+     * Actually issuing the refund through PhonePe happens outside this
      * app; this records that it happened.
      *
      * @param string $id

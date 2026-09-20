@@ -17,7 +17,7 @@ import NotFoundPage from "@/pages/not-found";
 // top-level imports sharing one module graph, so opening the bare
 // /login page pulled in the entire marketing site (course/package
 // browsing, recharts-based analytics previews) *and* the entire
-// checkout flow (Razorpay, checkout-client) *and* the register
+// checkout flow (PhonePe, checkout-client) *and* the register
 // wizard - everything else in this file's import list - as part of
 // the same eagerly-resolved chunk, none of which a visitor on /login
 // needs. Splitting these the same way the admin/student portals
@@ -38,6 +38,7 @@ const RegisterPage = lazy(() => import("@/pages/auth/register"));
 const CheckoutPage = lazy(() => import("@/pages/flow/checkout"));
 const PaymentSuccessPage = lazy(() => import("@/pages/flow/payment-success"));
 const PaymentFailedPage = lazy(() => import("@/pages/flow/payment-failed"));
+const PaymentStatusPage = lazy(() => import("@/pages/flow/payment-status"));
 
 // The admin and student portals (data tables, charts, forms) are the
 // bulk of the app's JS - most visitors only ever see the public
@@ -115,6 +116,7 @@ export function App() {
         <Route element={<FlowLayout />}>
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/payment/success" element={<PaymentSuccessPage />} />
+          <Route path="/payment/status" element={<PaymentStatusPage />} />
           <Route path="/payment/failed" element={<PaymentFailedPage />} />
         </Route>
 

@@ -52,6 +52,9 @@ return function (App $app) {
     // the amount charged has to be derived from the verified JWT's
     // studentId, not a client-supplied one)
     $app->get('/api/payments/{id}', [PaymentController::class, 'get']);
+    // PhonePe webhook (authenticated by its Authorization header, not a JWT).
+    // Static path - must stay before any /api/payments/{id} POST route.
+    $app->post('/api/payments/phonepe/callback', [PaymentController::class, 'phonePeCallback']);
     $app->get('/api/students/{id}/payments', [PaymentController::class, 'getStudentPayments']);
 
     // Result Routes

@@ -451,7 +451,7 @@ export function PurchasesManager() {
         open={Boolean(refundTarget)}
         onOpenChange={(open) => !open && setRefundTarget(null)}
         title={`Refund ${refundTarget?.studentName}'s order?`}
-        description="This marks the order as refunded in Nirvona. It does not itself move money — issue the actual refund through Razorpay's dashboard first, then record it here."
+        description="This marks the order as refunded in Nirvona. It does not itself move money — issue the actual refund through the PhonePe Business dashboard first, then record it here."
         confirmLabel="Mark as refunded"
         tone="danger"
         details={

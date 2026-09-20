@@ -14,7 +14,7 @@ use Nirvona\Middleware\{
     ErrorHandlingMiddleware
 };
 use Nirvona\Config\{Container, Database, Cache, App};
-use Nirvona\Integrations\RazorpayClient;
+use Nirvona\Integrations\PhonePeClient;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Predis\Client as RedisClient;
@@ -42,13 +42,18 @@ $container->set(PDO::class, Database::getConnection());
 $container->set(RedisClient::class, Cache::getRedis());
 $container->set(LoggerInterface::class, $logger);
 
-// RazorpayClient takes scalar constructor args (key id/secret), which
+// PhonePeClient takes scalar constructor args (client id/secret), which
 // the autowiring container can't infer from a type hint alone - it has
 // to be constructed explicitly, same as PDO/Redis above.
-$razorpayConfig = App::getRazorpay();
-$container->set(RazorpayClient::class, new RazorpayClient(
-    $razorpayConfig['keyId'],
-    $razorpayConfig['keySecret'],
+$phonePeConfig = App::getPhonePe();
+$container->set(PhonePeClient::class, new PhonePeClient(
+    $phonePeConfig['clientId'],
+    $phonePeConfig['clientSecret'],
+    $phonePeConfig['clientVersion'],
+    $phonePeConfig['environment'],
+    Cache::getRedis(),
+    $phonePeConfig['apiBase'],
+    $phonePeConfig['authBase'],
 ));
 
 AppFactory::setContainer($container);

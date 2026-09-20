@@ -248,7 +248,7 @@ if (empty($students)) {
                     'studentId' => $student['id'],
                     'packageId' => $package['id'],
                     'amount' => $package['originalPrice'] ?? 50000,
-                    'method' => 'razorpay'
+                    'method' => 'UPI'
                 ], $student['token']);
 
                 assert_test("Payment for {$package['name']}", $paymentResponse['status'] == 200);

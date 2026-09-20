@@ -4,8 +4,7 @@ import * as React from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  ArrowRight, BadgePercent, Building2, CheckCircle2, CreditCard, Landmark, Lock, ShieldCheck,
-  Smartphone, Wallet, X,
+  ArrowRight, BadgePercent, Building2, Lock, ShieldCheck, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -20,20 +19,10 @@ import { useCourses } from "@/hooks/use-catalogue";
 import { formatCurrency } from "@/lib/format";
 import { checkoutService, priceOrder } from "@/services/checkout.service";
 import { catalogueService } from "@/services/catalogue.service";
-import { useOrders } from "@/hooks/use-orders";
 import { useSession } from "@/hooks/use-session";
 import { useAsync } from "@/hooks/use-async";
 import { studentService } from "@/services/student.service";
 import { loginUrl } from "@/lib/redirect";
-import { cn } from "@/lib/utils";
-import type { Payment } from "@/types";
-
-const METHODS: { id: string; label: Payment["method"]; detail: string; icon: typeof Smartphone }[] = [
-  { id: "upi", label: "UPI", detail: "Google Pay, PhonePe, Paytm", icon: Smartphone },
-  { id: "card", label: "Card", detail: "Visa, Mastercard, RuPay", icon: CreditCard },
-  { id: "netbanking", label: "Netbanking", detail: "All major banks", icon: Landmark },
-  { id: "wallet", label: "Wallet", detail: "Paytm, Amazon Pay", icon: Wallet },
-];
 
 const CHECKOUT_STEPS = [
   { label: "Review", description: "Your order" },
@@ -45,7 +34,6 @@ export function CheckoutClient() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { addOrder } = useOrders();
   const { getCourse } = useCourses();
   const { session, hydrated } = useSession();
   const profile = useAsync(() => studentService.me(), [session?.id]);
@@ -63,14 +51,13 @@ export function CheckoutClient() {
   );
   const pkg = packageResult.data;
 
-  const [method, setMethod] = React.useState<(typeof METHODS)[number]["id"]>("upi");
   const [couponInput, setCouponInput] = React.useState("");
   const [coupon, setCoupon] = React.useState<{ code: string; percent: number } | null>(null);
   const [couponBusy, setCouponBusy] = React.useState(false);
   const [couponError, setCouponError] = React.useState<string>();
   const [processing, setProcessing] = React.useState(false);
 
-  // Checkout charges a real card/UPI via Razorpay against whoever is
+  // Checkout charges a real payment via PhonePe against whoever is
   // signed in - it can't proceed for a visitor with no session (there
   // would be no studentId for the backend to create the order under).
   // Navigating from a render body (rather than an effect) is what
@@ -131,22 +118,17 @@ export function CheckoutClient() {
     if (!session) return;
     setProcessing(true);
     try {
-      const methodLabel = METHODS.find((m) => m.id === method)!.label;
-      const order = await checkoutService.createOrder(pkg!, session, methodLabel, coupon?.code, {
-        // Razorpay's own widget is a full-screen UI while it's open -
-        // hide our "Processing payment" overlay so the two don't stack.
-        onOpen: () => setProcessing(false),
-        onVerifying: () => setProcessing(true),
-      });
-      addOrder(order);
-      navigate(`/payment/success?order=${order.id}`);
+      const { redirectUrl } = await checkoutService.startPayment(pkg!, coupon?.code);
+      // Hand the browser over to PhonePe's hosted payment page. PhonePe sends
+      // the customer back to /payment/status, which confirms the result with
+      // PhonePe before anything is unlocked. The overlay stays up until the
+      // page unloads.
+      window.location.assign(redirectUrl);
     } catch (error) {
-      const reason = error instanceof Error ? error.message : "Payment failed";
-      navigate(
-        `/payment/failed?package=${pkg!.id}&reason=${encodeURIComponent(reason)}`,
-      );
-    } finally {
+      // Nothing was charged (the order never reached PhonePe), so stay on
+      // checkout and say why instead of showing a "payment failed" screen.
       setProcessing(false);
+      toast.error(error instanceof Error ? error.message : "Could not start the payment.");
     }
   }
 
@@ -169,10 +151,10 @@ export function CheckoutClient() {
                 <LogoMark size="lg" />
               </span>
             </span>
-            <h2 className="mt-8 font-display text-2xl font-bold text-white">Processing payment</h2>
+            <h2 className="mt-8 font-display text-2xl font-bold text-white">Taking you to PhonePe</h2>
             <p className="mt-2 max-w-sm text-sm text-white/65">
-              Confirming your transaction with the payment gateway. Please do not refresh or close
-              this page.
+              Opening PhonePe&apos;s secure payment page. Please do not refresh or close this
+              page.
             </p>
             <div className="mt-8 h-1 w-56 overflow-hidden rounded-full bg-white/15">
               <motion.div
@@ -232,59 +214,38 @@ export function CheckoutClient() {
             </Card>
 
             <Card className="p-6">
-              <h2 className="font-display text-lg font-semibold text-navy-900">Payment method</h2>
+              <h2 className="font-display text-lg font-semibold text-navy-900">Payment</h2>
               <p className="mt-1 text-sm text-ink-500">
-                All methods are processed through a PCI-DSS compliant gateway.
+                You will pay on PhonePe&apos;s secure payment page and come straight back here.
               </p>
 
-              <fieldset className="mt-5">
-                <legend className="sr-only">Choose a payment method</legend>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {METHODS.map(({ id, label, detail, icon: Icon }) => (
-                    <label
-                      key={id}
-                      className={cn(
-                        "flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition-all",
-                        method === id
-                          ? "border-navy-900 bg-navy-50/60 ring-1 ring-navy-900"
-                          : "border-ink-200 hover:border-navy-200",
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        name="method"
-                        value={id}
-                        checked={method === id}
-                        onChange={() => setMethod(id)}
-                        className="sr-only"
-                      />
-                      <span
-                        className={cn(
-                          "flex size-10 shrink-0 items-center justify-center rounded-lg",
-                          method === id ? "bg-navy-900 text-white" : "bg-ink-100 text-ink-500",
-                        )}
-                      >
-                        <Icon className="size-[18px]" aria-hidden />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-sm font-semibold text-navy-900">{label}</span>
-                        <span className="block truncate text-xs text-ink-500">{detail}</span>
-                      </span>
-                      {method === id && (
-                        <CheckCircle2 className="ml-auto size-4 shrink-0 text-navy-900" aria-hidden />
-                      )}
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
+              <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+                {[
+                  { label: "UPI", detail: "PhonePe, Google Pay, Paytm, BHIM" },
+                  { label: "Cards", detail: "Visa, Mastercard, RuPay" },
+                  { label: "Netbanking", detail: "All major banks" },
+                  { label: "Wallets", detail: "PhonePe wallet and more" },
+                ].map((item) => (
+                  <li
+                    key={item.label}
+                    className="flex items-center gap-3 rounded-xl border border-ink-200 p-4"
+                  >
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-ink-100 text-ink-500">
+                      <ShieldCheck className="size-[18px]" aria-hidden />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-navy-900">{item.label}</span>
+                      <span className="block truncate text-xs text-ink-500">{item.detail}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
 
               <Alert tone="neutral" className="mt-5">
                 <p className="text-xs leading-relaxed">
-                  Payments are processed by Razorpay in test mode — no real money moves. Use test
-                  card <span className="font-mono">4111 1111 1111 1111</span>, any future
-                  expiry/CVV, to simulate a successful payment, or Razorpay&apos;s own
-                  &quot;Payment failed&quot; test option in the widget to preview the decline
-                  screen.
+                  Payments are processed by PhonePe. Your enrolment is activated only after PhonePe
+                  confirms the payment to us — closing the PhonePe page without paying charges
+                  nothing.
                 </p>
               </Alert>
             </Card>

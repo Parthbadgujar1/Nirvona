@@ -94,7 +94,12 @@ class RateLimitMiddleware implements MiddlewareInterface
         if (strpos($path, '/login') !== false) {
             return 'login';
         }
-        if (strpos($path, '/payments') !== false) {
+        // Only *starting* a payment is throttled tightly. The status page
+        // polls /payments/{id}/verify while a payment is pending, and the
+        // gateway webhook and payment history are read-only/idempotent, so
+        // they share the normal limit instead of locking customers out
+        // mid-checkout.
+        if (str_ends_with($path, '/payments/order')) {
             return 'payment';
         }
 

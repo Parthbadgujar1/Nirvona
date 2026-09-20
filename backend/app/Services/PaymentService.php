@@ -4,7 +4,8 @@ namespace Nirvona\Services;
 
 use Nirvona\Repositories\PaymentRepository;
 use Nirvona\Repositories\PackageRepository;
-use Nirvona\Integrations\RazorpayClient;
+use Nirvona\Config\App;
+use Nirvona\Integrations\PhonePeClient;
 use Nirvona\Exceptions\ServiceException;
 
 /**
@@ -19,7 +20,7 @@ class PaymentService extends BaseService
 {
     private PaymentRepository $paymentRepository;
     private PackageRepository $packageRepository;
-    private RazorpayClient $razorpay;
+    private PhonePeClient $phonePe;
     private EnrollmentService $enrollmentService;
 
     /** Server-side coupon table - mirrors the frontend's (deliberately
@@ -36,7 +37,7 @@ class PaymentService extends BaseService
     public function __construct(
         PaymentRepository $paymentRepository,
         PackageRepository $packageRepository,
-        RazorpayClient $razorpay,
+        PhonePeClient $phonePe,
         EnrollmentService $enrollmentService,
         \Psr\Log\LoggerInterface $logger,
         CircuitBreaker $circuitBreaker
@@ -44,43 +45,48 @@ class PaymentService extends BaseService
         parent::__construct($logger, $circuitBreaker);
         $this->paymentRepository = $paymentRepository;
         $this->packageRepository = $packageRepository;
-        $this->razorpay = $razorpay;
+        $this->phonePe = $phonePe;
         $this->enrollmentService = $enrollmentService;
     }
 
     /**
-     * Create a Razorpay order for a package purchase. The amount is
+     * Start a PhonePe checkout for a package purchase. The amount is
      * always computed here from the package's real price (plus an
      * optional server-validated coupon) - never trusted from the
      * client - so a tampered request can't buy a package for less than
      * its actual price.
+     *
+     * Returns the PhonePe-hosted payment page URL; the browser is sent
+     * there, and comes back to the frontend's /payment/status page, which
+     * then asks verifyPayment() what really happened.
      *
      * @param array $data studentId, packageId, courseSlug, couponCode?
      * @return array
      */
     public function createOrder(array $data): array
     {
+        // Checked outside the circuit breaker so these specific messages
+        // aren't masked by its generic "gateway unavailable" fallback.
+        if (!$this->phonePe->isConfigured()) {
+            return $this->failure(
+                'gateway_not_configured',
+                'Online payments are not set up yet. Please contact support.',
+                false
+            );
+        }
+
         // An admin who retires a package (status = inactive) expects it to
         // stop being purchasable immediately - the public listing already
-        // hides it, this stops a stale page/direct API call too. Checked
-        // outside the circuit breaker so the specific message isn't masked
-        // by the generic gateway fallback.
+        // hides it, this stops a stale page/direct API call too.
         if (!empty($data['packageId'])) {
             $existing = $this->packageRepository->getById($data['packageId']);
             if ($existing && ($existing['status'] ?? 'active') !== 'active') {
-                $message = 'This package is no longer available.';
-                return [
-                    'success' => false,
-                    'data' => null,
-                    'message' => $message,
-                    'error' => ['code' => 'package_unavailable', 'message' => $message],
-                    'retryable' => false,
-                ];
+                return $this->failure('package_unavailable', 'This package is no longer available.', false);
             }
         }
 
         return $this->executeWithCircuitBreaker(
-            'RazorpayGateway',
+            'PhonePeGateway',
             function () use ($data) {
                 $errors = $this->validate($data, [
                     'studentId' => ['required'],
@@ -115,10 +121,10 @@ class PaymentService extends BaseService
                 $total = $taxableValue + $gst;
 
                 // Payment row is created up front in "created" status so
-                // the frontend has a real internal payment id to send
-                // back on the verify call, and so an abandoned checkout
-                // (user closes the widget) still leaves an auditable
-                // record instead of vanishing silently.
+                // the return trip has a real internal payment id to look
+                // up, and so an abandoned checkout (customer closes the
+                // PhonePe page) still leaves an auditable record instead
+                // of vanishing silently.
                 $payment = $this->paymentRepository->create([
                     'studentId' => $data['studentId'],
                     'packageId' => $data['packageId'],
@@ -131,39 +137,39 @@ class PaymentService extends BaseService
                     'date' => date('Y-m-d H:i:s'),
                 ]);
 
+                $redirectUrl = rtrim(App::getFrontendUrl(), '/') . '/payment/status?payment=' . $payment['id'];
+
                 try {
-                    $order = $this->razorpay->createOrder(
-                        (int) round($total * 100),
-                        'INR',
+                    // Our payment id doubles as PhonePe's merchantOrderId.
+                    $order = $this->phonePe->createPayment(
                         $payment['id'],
-                        ['studentId' => $data['studentId'], 'packageId' => $data['packageId']]
+                        (int) round($total * 100),
+                        $redirectUrl,
+                        $package['name'] ?? 'Nirvona package purchase'
                     );
                 } catch (\Throwable $e) {
                     $this->paymentRepository->update($payment['id'], ['status' => 'failed']);
                     throw new ServiceException(
-                        "Razorpay order creation failed: " . $e->getMessage(),
+                        "PhonePe order creation failed: " . $e->getMessage(),
                         'PaymentService',
                         true
                     );
                 }
 
-                $this->paymentRepository->update($payment['id'], ['razorpayOrderId' => $order['id']]);
+                $this->paymentRepository->update($payment['id'], ['gatewayOrderId' => $order['orderId']]);
 
                 $this->auditLog('PAYMENT_ORDER_CREATE', 'Payment', $payment['id'], [
                     'studentId' => $data['studentId'],
                     'total' => $total,
-                    'razorpayOrderId' => $order['id'],
+                    'gatewayOrderId' => $order['orderId'],
                 ]);
 
                 return [
                     'success' => true,
                     'data' => [
                         'paymentId' => $payment['id'],
-                        'razorpayOrderId' => $order['id'],
-                        'razorpayKeyId' => $this->razorpay->getKeyId(),
+                        'redirectUrl' => $order['redirectUrl'],
                         'amount' => $total,
-                        'amountPaise' => $order['amount'],
-                        'currency' => $order['currency'],
                         'summary' => [
                             'subtotal' => $listPrice,
                             'discount' => $packageDiscount + $coupon,
@@ -221,116 +227,192 @@ class PaymentService extends BaseService
     }
 
     /**
-     * Verify a completed Razorpay Checkout payment and, if genuine,
-     * finalize it: mark the payment successful and enroll the student
-     * into the course. This is the only step that can be trusted to
-     * mean "money actually changed hands" - the signature is proof the
-     * response came from Razorpay and wasn't forged by a tampered
-     * client (see RazorpayClient::verifySignature).
+     * Find out what really happened to a payment by asking PhonePe
+     * (server-to-server) and, if - and only if - PhonePe says it is
+     * COMPLETED for the expected amount, finalize it: mark the payment
+     * successful and enroll the student. The browser's return trip from
+     * PhonePe and the webhook body are never trusted on their own.
      *
-     * @param array $data paymentId, razorpayOrderId, razorpayPaymentId, razorpaySignature, method?
-     * @return array
+     * Safe to call repeatedly (the status page polls it, and the webhook
+     * can race it): a payment is finalized and enrolled exactly once.
+     *
+     * @param string $paymentId
+     * @param ?string $studentId When set, the payment must belong to them
+     * @return array success + status ("successful" | "failed" | "pending") + data.payment
      */
-    public function verifyPayment(array $data): array
+    public function verifyPayment(string $paymentId, ?string $studentId = null): array
     {
+        $payment = $this->paymentRepository->getById($paymentId);
+        if (!$payment || ($studentId !== null && $payment['studentId'] !== $studentId)) {
+            return $this->failure('payment_not_found', 'Payment not found.', false, 'not_found');
+        }
+
+        // Terminal states need no round trip to PhonePe.
+        if (in_array($payment['status'], ['successful', 'failed'], true)) {
+            return $this->outcome($payment);
+        }
+
         return $this->executeWithCircuitBreaker(
-            'RazorpayVerification',
-            function () use ($data) {
-                $errors = $this->validate($data, [
-                    'paymentId' => ['required'],
-                    'razorpayOrderId' => ['required'],
-                    'razorpayPaymentId' => ['required'],
-                    'razorpaySignature' => ['required'],
-                ]);
-
-                if (!empty($errors)) {
+            'PhonePeVerification',
+            function () use ($payment) {
+                try {
+                    $remote = $this->phonePe->getOrderStatus($payment['id']);
+                } catch (\Throwable $e) {
                     throw new ServiceException(
-                        "Invalid verification data: " . json_encode($errors),
+                        'PhonePe status check failed: ' . $e->getMessage(),
                         'PaymentService',
-                        false
+                        true
                     );
                 }
 
-                $payment = $this->paymentRepository->getById($data['paymentId']);
-                if (!$payment) {
-                    throw new ServiceException(
-                        "Payment not found: {$data['paymentId']}",
-                        'PaymentService',
-                        false
+                if ($remote['state'] === 'COMPLETED') {
+                    $expectedPaise = (int) round(((float) $payment['total']) * 100);
+                    if ($remote['amount'] !== $expectedPaise) {
+                        // Paid, but not the amount we asked for: don't grant
+                        // access, and leave a trail for manual review.
+                        $this->paymentRepository->update($payment['id'], ['status' => 'failed']);
+                        $this->auditLog('PAYMENT_AMOUNT_MISMATCH', 'Payment', $payment['id'], [
+                            'expectedPaise' => $expectedPaise,
+                            'reportedPaise' => $remote['amount'],
+                        ]);
+                        return $this->outcome(
+                            $this->paymentRepository->getById($payment['id']),
+                            'We could not confirm the amount paid. Please contact support with your order id.'
+                        );
+                    }
+
+                    // Exactly-once: only the caller that flips the row does the
+                    // enrolment, so a webhook racing the status poll can't
+                    // double-enrol.
+                    $won = $this->paymentRepository->markSuccessfulOnce(
+                        $payment['id'],
+                        $remote['transactionId'] ?? $remote['orderId'] ?? $payment['id'],
+                        self::methodLabel($remote['paymentMode'])
                     );
+
+                    if ($won) {
+                        $this->auditLog('PAYMENT_VERIFY', 'Payment', $payment['id'], [
+                            'gatewayOrderId' => $remote['orderId'],
+                            'status' => 'successful',
+                        ]);
+
+                        // Enrollment failure here shouldn't undo a genuine,
+                        // already-captured payment - it's logged and isolated by
+                        // EnrollmentService's own executeWithFallback rather than
+                        // thrown back up.
+                        $enrollment = $this->enrollmentService->enroll([
+                            'studentId' => $payment['studentId'],
+                            'courseSlug' => $payment['courseSlug'],
+                            'packageId' => $payment['packageId'],
+                            'paymentId' => $payment['id'],
+                        ]);
+
+                        return $this->outcome(
+                            $this->paymentRepository->getById($payment['id']),
+                            null,
+                            $enrollment['data'] ?? null
+                        );
+                    }
+
+                    return $this->outcome($this->paymentRepository->getById($payment['id']));
                 }
 
-                if (($payment['razorpayOrderId'] ?? null) !== $data['razorpayOrderId']) {
-                    throw new ServiceException(
-                        "Order id mismatch for payment {$data['paymentId']}",
-                        'PaymentService',
-                        false
-                    );
-                }
-
-                $isGenuine = $this->razorpay->verifySignature(
-                    $data['razorpayOrderId'],
-                    $data['razorpayPaymentId'],
-                    $data['razorpaySignature']
-                );
-
-                if (!$isGenuine) {
-                    $this->paymentRepository->update($data['paymentId'], ['status' => 'failed']);
-                    $this->auditLog('PAYMENT_VERIFY_FAILED', 'Payment', $data['paymentId'], [
-                        'razorpayPaymentId' => $data['razorpayPaymentId'],
+                if ($remote['state'] === 'FAILED') {
+                    $this->paymentRepository->update($payment['id'], ['status' => 'failed']);
+                    $this->auditLog('PAYMENT_VERIFY_FAILED', 'Payment', $payment['id'], [
+                        'gatewayOrderId' => $remote['orderId'],
                     ]);
-
-                    return [
-                        'success' => false,
-                        'status' => 'failed',
-                        'message' => 'Payment signature verification failed',
-                        'error' => [
-                            'code' => 'signature_mismatch',
-                            'message' => 'We could not verify this payment. If money was deducted, it will be refunded automatically.',
-                        ],
-                    ];
+                    return $this->outcome($this->paymentRepository->getById($payment['id']));
                 }
 
-                $this->paymentRepository->update($data['paymentId'], [
-                    'status' => 'successful',
-                    'transactionId' => $data['razorpayPaymentId'],
-                    'razorpaySignature' => $data['razorpaySignature'],
-                    'method' => $data['method'] ?? 'razorpay',
-                ]);
-
-                $this->auditLog('PAYMENT_VERIFY', 'Payment', $data['paymentId'], [
-                    'razorpayPaymentId' => $data['razorpayPaymentId'],
-                    'status' => 'successful',
-                ]);
-
-                // Enrollment failure here shouldn't undo a genuine,
-                // already-captured payment - it's logged and isolated by
-                // EnrollmentService's own executeWithFallback rather than
-                // thrown back up.
-                $enrollment = $this->enrollmentService->enroll([
-                    'studentId' => $payment['studentId'],
-                    'courseSlug' => $payment['courseSlug'],
-                    'packageId' => $payment['packageId'],
-                    'paymentId' => $data['paymentId'],
-                ]);
-
-                return [
-                    'success' => true,
-                    'status' => 'successful',
-                    'message' => 'Payment verified successfully',
-                    'data' => [
-                        'payment' => $this->paymentRepository->getById($data['paymentId']),
-                        'enrollment' => $enrollment['data'] ?? null,
-                    ],
-                ];
+                // PENDING (customer still on PhonePe, or a UPI request not yet approved).
+                return $this->outcome($payment);
             },
             [
-                'success' => false,
+                'success' => true,
                 'status' => 'pending',
-                'message' => 'Verification service temporarily unavailable',
+                'message' => 'Payment status is temporarily unavailable. Retrying...',
+                'data' => ['status' => 'pending', 'payment' => $payment, 'reason' => null],
                 'retryable' => true,
             ]
         );
+    }
+
+    /**
+     * PhonePe webhook entry point. The Authorization header is checked,
+     * then the order is re-verified with PhonePe rather than trusting the
+     * body, so a forged call can at worst trigger a harmless status check.
+     *
+     * @param ?string $authorization Raw Authorization header
+     * @param array $body Decoded webhook JSON
+     */
+    public function handleWebhook(?string $authorization, array $body): array
+    {
+        $valid = PhonePeClient::verifyWebhookAuthorization(
+            $authorization,
+            $_ENV['PHONEPE_WEBHOOK_USERNAME'] ?? '',
+            $_ENV['PHONEPE_WEBHOOK_PASSWORD'] ?? ''
+        );
+        if (!$valid) {
+            return $this->failure('unauthorized', 'Invalid webhook credentials.', false, 'unauthorized');
+        }
+
+        $payload = is_array($body['payload'] ?? null) ? $body['payload'] : $body;
+        $merchantOrderId = (string) ($payload['merchantOrderId'] ?? '');
+        if ($merchantOrderId === '') {
+            return $this->failure('invalid_payload', 'Missing merchantOrderId.', false, 'invalid');
+        }
+
+        $result = $this->verifyPayment($merchantOrderId);
+        // Always acknowledge a well-formed call so PhonePe doesn't keep retrying
+        // for an unknown order.
+        return ['success' => true, 'status' => $result['status'] ?? 'unknown'];
+    }
+
+    /** PhonePe payment modes (UPI_QR, CREDIT_CARD, NET_BANKING, ...) -> the labels the app shows. */
+    private static function methodLabel(?string $mode): string
+    {
+        $mode = strtoupper((string) $mode);
+        return match (true) {
+            str_contains($mode, 'CARD') => 'Card',
+            str_contains($mode, 'NET') => 'Netbanking',
+            str_contains($mode, 'WALLET') => 'Wallet',
+            default => 'UPI',
+        };
+    }
+
+    /** Uniform "what state is this payment in" response for the status endpoint. */
+    private function outcome(array $payment, ?string $reason = null, ?array $enrollment = null): array
+    {
+        $status = match ($payment['status']) {
+            'successful' => 'successful',
+            'failed' => 'failed',
+            default => 'pending',
+        };
+        $reason ??= $status === 'failed' ? 'The payment was not completed.' : null;
+
+        return [
+            'success' => true,
+            'status' => $status,
+            'message' => match ($status) {
+                'successful' => 'Payment verified successfully',
+                'failed' => $reason,
+                default => 'Payment is still being processed',
+            },
+            'data' => ['status' => $status, 'payment' => $payment, 'enrollment' => $enrollment, 'reason' => $reason],
+        ];
+    }
+
+    private function failure(string $code, string $message, bool $retryable, string $kind = 'error'): array
+    {
+        return [
+            'success' => false,
+            'data' => null,
+            'message' => $message,
+            'error' => ['code' => $code, 'message' => $message],
+            'retryable' => $retryable,
+            'kind' => $kind,
+        ];
     }
 
     /**
