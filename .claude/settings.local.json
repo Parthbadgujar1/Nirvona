@@ -36,7 +36,13 @@
       "Bash('/c/Program Files/PostgreSQL/18/bin/psql.exe' -U postgres -h localhost -d nirvona -c ' *)",
       "Bash(php -l app/Services/AdminService.php)",
       "Bash(Get-ChildItem -Force)",
-      "Bash(Select-Object Name, PSIsContainer)"
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(git show *)",
+      "Bash(echo \"exit: $?\")",
+      "Read(//tmp/**)",
+      "PowerShell(Get-NetTCPConnection -State Listen | Where-Object {$_.LocalPort -eq 8000 -or $_.LocalPort -eq 3000} | Select-Object LocalPort, OwningProcess)",
+      "PowerShell(Get-Process -Id 7804, 7624)",
+      "PowerShell(Stop-Process -Id 7624 -Force)"
     ]
   }
 }

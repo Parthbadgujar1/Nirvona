@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { Field, Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { INDIAN_STATES } from "@/data/site";
 import {
   Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -34,16 +36,42 @@ import type { Student } from "@/types";
 
 const PAGE_SIZE = 10;
 
-const EDIT_FIELDS: { key: keyof Student; label: string }[] = [
-  { key: "fullName", label: "Full name" },
-  { key: "email", label: "Email" },
-  { key: "mobile", label: "Mobile" },
-  { key: "className", label: "Class" },
-  { key: "school", label: "School" },
-  { key: "city", label: "City" },
-  { key: "state", label: "State" },
-  { key: "guardianName", label: "Guardian name" },
-  { key: "guardianMobile", label: "Guardian mobile" },
+/** Classes offered at sign-up; a student already on some other value keeps it selectable. */
+const CLASS_OPTIONS = ["Class 11", "Class 12", "Dropper", "Other"];
+const GENDER_OPTIONS = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+  { value: "other", label: "Other" },
+];
+
+type EditField =
+  | { key: string; label: string; kind: "text" | "email" | "tel" | "date" }
+  | { key: string; label: string; kind: "select"; placeholder: string; options: { value: string; label: string }[] };
+
+const EDIT_FIELDS: EditField[] = [
+  { key: "fullName", label: "Full name", kind: "text" },
+  { key: "email", label: "Email", kind: "email" },
+  { key: "mobile", label: "Mobile", kind: "tel" },
+  { key: "dateOfBirth", label: "Date of birth", kind: "date" },
+  {
+    key: "className",
+    label: "Class",
+    kind: "select",
+    placeholder: "Select class",
+    options: CLASS_OPTIONS.map((c) => ({ value: c, label: c })),
+  },
+  { key: "gender", label: "Gender", kind: "select", placeholder: "Not specified", options: GENDER_OPTIONS },
+  { key: "school", label: "School", kind: "text" },
+  { key: "city", label: "City", kind: "text" },
+  {
+    key: "state",
+    label: "State",
+    kind: "select",
+    placeholder: "Select state",
+    options: INDIAN_STATES.map((st) => ({ value: st, label: st })),
+  },
+  { key: "guardianName", label: "Guardian name", kind: "text" },
+  { key: "guardianMobile", label: "Guardian mobile", kind: "tel" },
 ];
 
 export function StudentsManager() {
@@ -84,10 +112,12 @@ export function StudentsManager() {
       fullName: student.fullName,
       email: student.email,
       mobile: student.mobile,
-      className: student.className,
+      dateOfBirth: (student.dateOfBirth ?? "").slice(0, 10),
+      className: student.className ?? "",
+      gender: student.gender ?? "",
       school: student.school ?? "",
-      city: student.city,
-      state: student.state,
+      city: student.city ?? "",
+      state: student.state ?? "",
       guardianName: student.guardianName ?? "",
       guardianMobile: student.guardianMobile ?? "",
     });
@@ -527,15 +557,37 @@ export function StudentsManager() {
                 <DialogDescription>Changes apply immediately.</DialogDescription>
               </DialogHeader>
               <DialogBody className="grid gap-4 sm:grid-cols-2">
-                {EDIT_FIELDS.map((field) => (
-                  <Field key={field.key} label={field.label} htmlFor={`s-${field.key}`}>
-                    <Input
-                      id={`s-${field.key}`}
-                      value={draft[field.key] ?? ""}
-                      onChange={(e) => setDraft((d) => ({ ...d, [field.key]: e.target.value }))}
-                    />
-                  </Field>
-                ))}
+                {EDIT_FIELDS.map((field) => {
+                  const id = `s-${field.key}`;
+                  const value = draft[field.key] ?? "";
+                  const set = (next: string) => setDraft((d) => ({ ...d, [field.key]: next }));
+                  return (
+                    <Field key={field.key} label={field.label} htmlFor={id}>
+                      {field.kind === "select" ? (
+                        <Select id={id} value={value} onChange={(e) => set(e.target.value)}>
+                          <option value="">{field.placeholder}</option>
+                          {/* A value already on the record that is not in the list stays selectable. */}
+                          {value && !field.options.some((o) => o.value === value) && (
+                            <option value={value}>{value}</option>
+                          )}
+                          {field.options.map((o) => (
+                            <option key={o.value} value={o.value}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </Select>
+                      ) : (
+                        <Input
+                          id={id}
+                          type={field.kind}
+                          value={value}
+                          max={field.kind === "date" ? new Date().toISOString().slice(0, 10) : undefined}
+                          onChange={(e) => set(e.target.value)}
+                        />
+                      )}
+                    </Field>
+                  );
+                })}
               </DialogBody>
               <DialogFooter>
                 <Button type="button" variant="secondary" onClick={() => setEditing(null)}>

@@ -34,6 +34,7 @@ class AdminService extends BaseService
     private AdmitCardRepository $admitCardRepository;
     private ExamCredentialRepository $examCredentialRepository;
     private ExamCentreRepository $examCentreRepository;
+    private StudentService $studentService;
 
     public function __construct(
         StudentRepository $studentRepository,
@@ -46,6 +47,7 @@ class AdminService extends BaseService
         AdmitCardRepository $admitCardRepository,
         ExamCredentialRepository $examCredentialRepository,
         ExamCentreRepository $examCentreRepository,
+        StudentService $studentService,
         \Psr\Log\LoggerInterface $logger,
         CircuitBreaker $circuitBreaker
     ) {
@@ -60,6 +62,7 @@ class AdminService extends BaseService
         $this->admitCardRepository = $admitCardRepository;
         $this->examCredentialRepository = $examCredentialRepository;
         $this->examCentreRepository = $examCentreRepository;
+        $this->studentService = $studentService;
     }
 
     /**
@@ -379,30 +382,18 @@ class AdminService extends BaseService
      */
     public function updateStudent(string $id, array $data): array
     {
-        return $this->executeWithFallback(
-            function () use ($id, $data) {
-                if (!$this->studentRepository->getById($id)) {
-                    throw new ServiceException("Student not found: {$id}", 'AdminService', false);
-                }
-
-                // Password changes go through a dedicated reset flow
-                // (hashing, current-password checks) - never accept a raw
-                // passwordHash/password field from a generic profile-edit
-                // payload, admin or not.
-                unset($data['passwordHash'], $data['password']);
-
-                $this->studentRepository->update($id, $data);
-                $this->auditLog('UPDATE', 'Student', $id, ['fields' => array_keys($data)]);
-
-                return [
-                    'success' => true,
-                    'data' => $this->studentRepository->getById($id),
-                    'message' => 'Student updated successfully',
-                ];
-            },
-            null,
-            'updateStudent'
-        );
+        // Same validation and field whitelist as a student editing their own
+        // profile (valid email/mobile/date of birth/class, unique email, and
+        // never the id, status or password hash) - previously this passed the
+        // raw request body straight to the database. Status changes have their
+        // own deactivate/reactivate actions, which also end the student's
+        // sessions.
+        $result = $this->studentService->updateProfile($id, $data);
+        if ($result['success'] ?? false) {
+            $this->auditLog('UPDATE', 'Student', $id, ['fields' => array_keys($data)]);
+            $result['message'] = 'Student updated successfully';
+        }
+        return $result;
     }
 
     /**

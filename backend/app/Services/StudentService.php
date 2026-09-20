@@ -190,12 +190,19 @@ class StudentService extends BaseService
                         $updateData[$key] = trim($value);
                     }
                 }
+                // A blank required-ish field from a form means "leave it as it is",
+                // never "erase it" (a student without a date of birth yet, say).
+                foreach (['dateOfBirth', 'className'] as $keep) {
+                    if (array_key_exists($keep, $updateData) && $updateData[$keep] === '') {
+                        unset($updateData[$keep]);
+                    }
+                }
 
                 $phone = '/^[0-9+\s-]{10,15}$/';
                 $errors = [];
 
                 if (array_key_exists('fullName', $updateData) && mb_strlen($updateData['fullName']) < 3) {
-                    $errors['fullName'] = 'Enter your full name (at least 3 characters).';
+                    $errors['fullName'] = 'Enter a full name (at least 3 characters).';
                 }
                 if (array_key_exists('email', $updateData)) {
                     if (!filter_var($updateData['email'], FILTER_VALIDATE_EMAIL)) {
@@ -222,6 +229,13 @@ class StudentService extends BaseService
                             $errors['dateOfBirth'] = 'Enter a date of birth between 12 and 40 years of age.';
                         }
                     }
+                }
+                if (
+                    array_key_exists('gender', $updateData)
+                    && $updateData['gender'] !== ''
+                    && !in_array($updateData['gender'], ['male', 'female', 'other'], true)
+                ) {
+                    $errors['gender'] = 'Choose a valid gender.';
                 }
                 if (array_key_exists('className', $updateData)) {
                     // Keep whatever an admin may have set before; otherwise
