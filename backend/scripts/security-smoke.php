@@ -157,5 +157,25 @@ for ($i = 0; $i < 13; $i++) {
 }
 check('login attempts on one account are cut off with 429 (' . implode(',', $codes) . ')', in_array(429, $codes, true));
 
+echo "== 8. No account still uses a known default / demo password ==\n";
+$known = ['demo1234', 'password123', 'Password123', 'Password@123', 'admin123', 'admin1234', 'Admin@123',
+    'password', '12345678', 'test1234', 'Test@1234', 'nirvona123'];
+foreach (['admins' => 'admin', 'students' => 'student'] as $table => $kind) {
+    foreach ($pdo->query("SELECT email, passwordHash AS hash FROM {$table}")->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $weak = null;
+        foreach ($known as $candidate) {
+            if (password_verify($candidate, (string) $row['hash'])) {
+                $weak = $candidate;
+                break;
+            }
+        }
+        check(
+            "{$kind} {$row['email']} does not use a known default password",
+            $weak === null,
+            "guessable password - run: php scripts/set-password.php {$kind} {$row['email']}"
+        );
+    }
+}
+
 echo "\n" . ($failed === 0 ? "ALL CHECKS PASSED" : "{$failed} CHECK(S) FAILED") . "\n";
 exit($failed === 0 ? 0 : 1);

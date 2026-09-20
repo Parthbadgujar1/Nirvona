@@ -42,11 +42,15 @@ class AuthMiddleware implements MiddlewareInterface
             return $this->unauthorizedResponse('Invalid or expired token');
         }
 
+        // Deactivated account, or the password was changed/reset after this
+        // token was issued: the session must end now, not when the token expires.
         if (
-            ($claims['role'] ?? null) === 'student'
-            && \Nirvona\Support\TokenRevocation::isRevoked((string) ($claims['sub'] ?? ''))
+            \Nirvona\Support\TokenRevocation::isRevoked(
+                (string) ($claims['sub'] ?? ''),
+                isset($claims['iat']) ? (int) $claims['iat'] : null
+            )
         ) {
-            return $this->unauthorizedResponse('Account is not active');
+            return $this->unauthorizedResponse('Session ended. Please sign in again.');
         }
 
         $request = $request

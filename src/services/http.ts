@@ -65,6 +65,17 @@ function extractErrorCode(body: unknown): string | undefined {
   return undefined;
 }
 
+/** What to tell a person when the server sent no message of its own. Never the raw HTTP status text. */
+function statusMessage(status: number): string {
+  if (status === 401) return "Your session is invalid or has expired. Please sign in again.";
+  if (status === 403) return "You do not have permission to do that.";
+  if (status === 404) return "We could not find what you were looking for.";
+  if (status === 413) return "That is too large to send.";
+  if (status === 429) return "Too many requests. Please wait a moment and try again.";
+  if (status >= 500) return "The server had a problem. Please try again in a moment.";
+  return "Something went wrong. Please try again.";
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -226,7 +237,7 @@ async function fetchApiUncached<T>(
       // before the caller ever saw it.
       const body = await response.json().catch(() => null);
       if (response.status === 401 && token) handleUnauthorized();
-      const message = extractErrorMessage(body) || `API Error: ${response.statusText}`;
+      const message = extractErrorMessage(body) || statusMessage(response.status);
       throw new ApiError(
         message,
         response.status,
@@ -386,10 +397,23 @@ export async function postEnvelope<T>(endpoint: string, body: unknown): Promise<
   const data = await response.json().catch(() => null);
 
   if (!response.ok || (data && typeof data === "object" && "success" in data && !data.success)) {
+    // The backend sends errors in two shapes ({error: "text"} and
+    // {error: {code, message}}); extractErrorMessage understands both. This
+    // used to read only the second, so a wrong password surfaced as the HTTP
+    // status text - "API Error: Unauthorized" - instead of the server's
+    // "Invalid email or password".
     const message =
-      (data && typeof data === "object" && (data.error?.message ?? data.message)) ||
-      `API Error: ${response.statusText}`;
-    throw new ApiError(message, response.status, response.status === 401 ? "invalid_credentials" : "api_error");
+      extractErrorMessage(data) ||
+      (response.status === 401
+        ? "Invalid email or password."
+        : response.status === 429
+          ? "Too many attempts. Please wait a few minutes and try again."
+          : statusMessage(response.status));
+    throw new ApiError(
+      message,
+      response.status,
+      extractErrorCode(data) ?? (response.status === 401 ? "invalid_credentials" : "api_error"),
+    );
   }
 
   return data as T;

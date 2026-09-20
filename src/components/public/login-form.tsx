@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Eye, EyeOff, LayoutDashboard, LogIn, Mail, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, LogIn, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
@@ -51,13 +51,6 @@ export function LoginForm() {
     } finally {
       setSubmitting(false);
     }
-  }
-
-  function fillDemo(role: "student" | "admin") {
-    setIdentifier(role === "admin" ? "admin@nirvona.edu.in" : "aarav.sharma77@example.com");
-    setPassword("demo1234");
-    setErrors({});
-    setFormError(undefined);
   }
 
   return (
@@ -161,26 +154,6 @@ export function LoginForm() {
           Register
         </Link>
       </p>
-
-      <div className="mt-8 rounded-xl border border-dashed border-ink-300 bg-canvas p-4">
-        <p className="text-2xs font-bold uppercase tracking-wider text-ink-400">
-          Prototype demo access
-        </p>
-        <p className="mt-1.5 text-xs leading-relaxed text-ink-500">
-          Use the buttons below to autofill demo credentials (password: <strong>demo1234</strong>) and
-          explore the student or admin portal.
-        </p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <Button variant="secondary" size="sm" onClick={() => fillDemo("student")}>
-            <LayoutDashboard />
-            Student demo
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => fillDemo("admin")}>
-            <ShieldCheck />
-            Admin demo
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }

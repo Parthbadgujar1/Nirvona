@@ -44,6 +44,15 @@ class AdminMiddleware implements MiddlewareInterface
             return $this->errorResponse(403, 'FORBIDDEN', 'Admin access required');
         }
 
+        if (
+            \Nirvona\Support\TokenRevocation::isRevoked(
+                (string) ($claims['sub'] ?? ''),
+                isset($claims['iat']) ? (int) $claims['iat'] : null
+            )
+        ) {
+            return $this->errorResponse(401, 'UNAUTHORIZED', 'Session ended. Please sign in again.');
+        }
+
         $request = $request
             ->withAttribute('userId', $claims['sub'] ?? null)
             ->withAttribute('role', $claims['role'] ?? null)
