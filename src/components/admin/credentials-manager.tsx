@@ -3,7 +3,7 @@
 import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  AlertTriangle, CheckCircle2, Copy, Download, FileSpreadsheet, Info, KeyRound, MoreHorizontal,
+  AlertTriangle, CheckCircle2, Copy, Download, FileSpreadsheet, KeyRound, MoreHorizontal,
   RotateCcw, ShieldCheck, Upload, XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -27,7 +27,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/states";
 import { useAsync } from "@/hooks/use-async";
 import { adminService, adminData } from "@/services/admin.service";
-import { exportRows, timestampedName } from "@/lib/export";
+import { exportRows, parseCSV, timestampedName } from "@/lib/export";
 import { maskSecret, formatNumber, formatDateTime } from "@/lib/format";
 import type { ExamCredential, UploadValidationResult } from "@/types";
 import { cn } from "@/lib/utils";
@@ -52,11 +52,22 @@ export function CredentialsManager() {
     () => (examId ? adminService.credentials(examId) : Promise.resolve([])),
     [examId],
   );
+  // The candidate roster (who is ELIGIBLE for a credential) - a different
+  // list from `credentials` above (who already HAS one, which starts
+  // empty). The downloadable template and "is this student ID real"
+  // validation both need the roster, not the assigned-credentials list.
+  const candidateRoster = useAsync(
+    () => (examId ? adminService.candidates(examId) : Promise.resolve([])),
+    [examId],
+  );
 
   const [file, setFile] = React.useState<UploadedFile | null>(null);
   const [uploading, setUploading] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
   const [validation, setValidation] = React.useState<UploadValidationResult | null>(null);
+  const [validRows, setValidRows] = React.useState<
+    { row: number; studentId: string; studentName?: string; loginId: string; password: string }[]
+  >([]);
   const [committing, setCommitting] = React.useState(false);
   const [committed, setCommitted] = React.useState(false);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
@@ -76,6 +87,7 @@ export function CredentialsManager() {
 
   const exam = exams.data.find((e) => e.id === examId) ?? exams.data[0];
   const rows = credentials.data ?? [];
+  const eligible = candidateRoster.data ?? [];
 
   const filtered = rows.filter((row) => {
     if (filters.status !== "all" && row.status !== filters.status) return false;
@@ -94,9 +106,15 @@ export function CredentialsManager() {
   const step = committed ? 4 : validation ? 3 : file ? 2 : 1;
 
   function downloadCandidateTemplate() {
-    const template = rows.map((row) => ({
-      "Student ID": row.studentId,
-      "Student Name": row.studentName,
+    if (eligible.length === 0) {
+      toast.error("No candidates registered for this exam yet", {
+        description: "Register candidates on the exam's page before issuing credentials.",
+      });
+      return;
+    }
+    const template = eligible.map((candidate) => ({
+      "Student ID": candidate.studentId,
+      "Student Name": candidate.studentName,
       Exam: exam.id,
       "Exam Login ID": "",
       "Exam Password": "",
@@ -111,9 +129,71 @@ export function CredentialsManager() {
     });
   }
 
+  /**
+   * Checks the uploaded rows against the real candidate roster and the
+   * exam's already-assigned credentials, entirely client-side - so the
+   * "review before you commit" step is instant and writes nothing. The
+   * rules mirror exactly what the server enforces at commit time (see
+   * ExamCredentialService::bulkAssign), so nothing shown here can surprise
+   * the admin once they confirm.
+   */
+  function validateRows(parsed: Record<string, string>[]): {
+    result: UploadValidationResult;
+    valid: typeof validRows;
+  } {
+    const eligibleIds = new Set(eligible.map((c) => c.studentId));
+    const alreadyAssigned = new Set(
+      rows.filter((r) => r.status !== "revoked").map((r) => r.studentId),
+    );
+    const seenLogin = new Set<string>();
+    let successful = 0;
+    let duplicate = 0;
+    let invalid = 0;
+    let missingStudentId = 0;
+    const problems: UploadValidationResult["rows"] = [];
+    const valid: typeof validRows = [];
+
+    parsed.forEach((raw, i) => {
+      const row = i + 2; // header row + 1-indexed
+      const studentId = (raw["Student ID"] ?? "").trim();
+      const studentName = (raw["Student Name"] ?? "").trim() || "—";
+      const loginId = (raw["Exam Login ID"] ?? "").trim();
+      const password = (raw["Exam Password"] ?? "").trim();
+
+      const flag = (status: "invalid" | "duplicate", message: string) => {
+        (status === "invalid" ? invalid++ : duplicate++);
+        problems.push({ row, studentId, studentName, loginId, status, message });
+      };
+
+      if (!studentId) {
+        missingStudentId++;
+        problems.push({ row, studentId: "", studentName, loginId, status: "invalid", message: "Student ID column is empty" });
+        return;
+      }
+      if (!eligibleIds.has(studentId)) {
+        return flag("invalid", "Student ID not found in this exam's candidate list");
+      }
+      if (!loginId) return flag("invalid", "Exam Login ID column is empty");
+      if (!password) return flag("invalid", "Exam Password column is empty");
+      if (password.length < 8 || password.length > 16) return flag("invalid", "Password must be 8-16 characters");
+      if (seenLogin.has(loginId.toLowerCase())) return flag("duplicate", "Duplicate login ID within uploaded file");
+      if (alreadyAssigned.has(studentId)) return flag("duplicate", "Credential already assigned for this student");
+
+      seenLogin.add(loginId.toLowerCase());
+      successful++;
+      valid.push({ row, studentId, studentName, loginId, password });
+    });
+
+    return {
+      result: { processed: parsed.length, successful, duplicate, invalid, missingStudentId, rows: problems },
+      valid,
+    };
+  }
+
   async function handleUpload(picked: UploadedFile) {
     setFile(picked);
     setValidation(null);
+    setValidRows([]);
     setCommitted(false);
     setUploading(true);
     setProgress(0);
@@ -124,8 +204,23 @@ export function CredentialsManager() {
     }
     setUploading(false);
 
-    const result = await adminService.validateCredentialUpload();
+    let parsed: Record<string, string>[];
+    try {
+      parsed = parseCSV(await picked.raw.text());
+    } catch {
+      toast.error("Could not read this file", { description: "Upload the CSV workbook you downloaded, unmodified apart from the two credential columns." });
+      resetUpload();
+      return;
+    }
+    if (parsed.length === 0) {
+      toast.error("That file has no rows to process.");
+      resetUpload();
+      return;
+    }
+
+    const { result, valid } = validateRows(parsed);
     setValidation(result);
+    setValidRows(valid);
     toast.info("Validation complete", {
       description: `${formatNumber(result.processed)} records processed. Review the results before mapping.`,
     });
@@ -133,18 +228,27 @@ export function CredentialsManager() {
 
   async function commit() {
     setCommitting(true);
-    await new Promise((r) => setTimeout(r, 1300));
-    setCommitting(false);
-    setCommitted(true);
-    credentials.reload();
-    toast.success("Credentials uploaded successfully", {
-      description: `${formatNumber(validation?.successful ?? 0)} candidates updated.`,
-    });
+    try {
+      const result = await adminService.bulkAssignCredentials(exam.id, validRows);
+      setValidation(result);
+      setCommitted(true);
+      credentials.reload();
+      candidateRoster.reload();
+      exams.reload();
+      toast.success("Credentials uploaded successfully", {
+        description: `${formatNumber(result.successful)} candidates updated.`,
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not assign credentials.");
+    } finally {
+      setCommitting(false);
+    }
   }
 
   function resetUpload() {
     setFile(null);
     setValidation(null);
+    setValidRows([]);
     setCommitted(false);
     setProgress(0);
   }
@@ -178,11 +282,16 @@ export function CredentialsManager() {
     {
       key: "password",
       header: "Exam Password",
-      cell: (row) => (
-        <span className="font-mono text-xs text-ink-600">
-          {revealAll ? row.password : maskSecret(row.password, 4)}
-        </span>
-      ),
+      cell: (row) =>
+        row.password ? (
+          <span className="font-mono text-xs text-ink-600">
+            {revealAll ? row.password : maskSecret(row.password, 4)}
+          </span>
+        ) : (
+          <span className="text-xs italic text-ink-400" title="Only stored as a hash - shown once, when it was assigned.">
+            Not retrievable
+          </span>
+        ),
     },
     {
       key: "status",
@@ -452,10 +561,34 @@ export function CredentialsManager() {
                       )}
 
                       {committed ? (
-                        <Alert tone="success" className="mt-5" title="Credentials uploaded successfully">
-                          {formatNumber(validation.successful)} candidates updated. Credentials are
-                          now available on their admit cards.
-                        </Alert>
+                        <>
+                          <Alert tone="success" className="mt-5" title="Credentials uploaded successfully">
+                            {formatNumber(validation.successful)} candidates updated. Passwords are
+                            stored as a hash and cannot be shown again after this page reloads -
+                            download or hand out the list now.
+                          </Alert>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="mt-3"
+                            onClick={() => {
+                              exportRows(
+                                timestampedName(`Nirvona_IssuedCredentials_${exam.id}`),
+                                validRows,
+                                [
+                                  { key: "studentId", header: "Student ID" },
+                                  { key: "studentName", header: "Student Name" },
+                                  { key: "loginId", header: "Exam Login ID" },
+                                  { key: "password", header: "Exam Password" },
+                                ],
+                              );
+                              toast.warning("Credentials file downloaded — store it securely and delete it once distributed.");
+                            }}
+                          >
+                            <Download />
+                            Download issued credentials (one-time)
+                          </Button>
+                        </>
                       ) : (
                         <div className="mt-5 flex flex-wrap gap-2">
                           <Button onClick={() => setConfirmOpen(true)} loading={committing}>
@@ -552,10 +685,6 @@ export function CredentialsManager() {
               />
             )}
 
-            <p className="flex items-start gap-2 text-xs text-ink-400">
-              <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-              All credentials shown are non-functional demo values generated for this prototype.
-            </p>
           </div>
         </TabsContent>
 

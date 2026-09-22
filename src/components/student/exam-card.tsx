@@ -3,7 +3,6 @@ import { ArrowRight, CalendarDays, Clock, IdCard, MapPin, Timer, Trophy } from "
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { getCentre } from "@/data/exams";
 import { formatDate, daysUntil } from "@/lib/format";
 import type { Exam } from "@/types";
 import { cn } from "@/lib/utils";
@@ -19,7 +18,6 @@ export function ExamCard({
   className?: string;
   resultHref?: string;
 }) {
-  const centre = getCentre(exam.centreId);
   const days = daysUntil(exam.date, TODAY);
   const upcoming = days >= 0;
   const admitReady = exam.status === "admit-card-available";
@@ -41,7 +39,11 @@ export function ExamCard({
         <Row icon={CalendarDays} label="Date" value={formatDate(exam.date, "full")} />
         <Row icon={Clock} label="Reporting" value={exam.reportingTime} />
         <Row icon={Timer} label="Exam time" value={exam.examTime} />
-        <Row icon={MapPin} label="Centre" value={centre ? `${centre.name.split("— ")[1]}, ${centre.city}` : "To be allotted"} />
+        <Row
+          icon={MapPin}
+          label="Centre"
+          value={exam.centreName ? `${exam.centreName}${exam.centreCity ? `, ${exam.centreCity}` : ""}` : "To be allotted"}
+        />
       </dl>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-ink-100 p-5">

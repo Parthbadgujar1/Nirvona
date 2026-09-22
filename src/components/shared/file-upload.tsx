@@ -9,9 +9,11 @@ import { cn } from "@/lib/utils";
 export interface UploadedFile {
   name: string;
   size: number;
+  /** The picked File itself, for callers that need to actually read its content. */
+  raw: File;
 }
 
-/** Drag-and-drop file input. The file is never transmitted in this prototype. */
+/** Drag-and-drop file input. */
 export function FileUpload({
   accept = ".xlsx,.xls,.csv",
   hint = "XLSX, XLS or CSV · up to 10 MB",
@@ -39,7 +41,7 @@ export function FileUpload({
   function handleFiles(list: FileList | null) {
     const picked = list?.[0];
     if (!picked) return;
-    onFileSelected({ name: picked.name, size: picked.size });
+    onFileSelected({ name: picked.name, size: picked.size, raw: picked });
   }
 
   if (file) {

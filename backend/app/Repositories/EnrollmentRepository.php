@@ -31,6 +31,23 @@ class EnrollmentRepository extends BaseRepository
     }
 
     /**
+     * Every student with a currently active, non-expired enrollment in a
+     * course - the pool an admin registers as exam candidates from (see
+     * ExamCandidateService::registerEnrolled()).
+     *
+     * @param string $courseSlug
+     * @return string[] studentIds
+     */
+    public function getActiveStudentIdsForCourse(string $courseSlug): array
+    {
+        return array_column($this->select(
+            "SELECT DISTINCT studentId FROM {$this->table}
+             WHERE courseSlug = ? AND status = 'active' AND endDate >= CURRENT_DATE",
+            [$courseSlug]
+        ), 'studentId');
+    }
+
+    /**
      * Get a student's currently active enrollment for a course
      *
      * @param string $studentId

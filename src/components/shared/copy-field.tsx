@@ -17,7 +17,7 @@ export function CopyField({
   tone = "light",
 }: {
   label: string;
-  value: string;
+  value: string | null | undefined;
   secret?: boolean;
   className?: string;
   tone?: "light" | "dark";
@@ -26,6 +26,7 @@ export function CopyField({
   const [copied, setCopied] = React.useState(false);
 
   async function copy() {
+    if (!value) return;
     try {
       await navigator.clipboard.writeText(value);
       setCopied(true);
@@ -36,7 +37,7 @@ export function CopyField({
     }
   }
 
-  const shown = revealed ? value : "•".repeat(Math.max(8, value.length));
+  const shown = !value ? "—" : revealed ? value : "•".repeat(Math.max(8, value.length));
 
   return (
     <div

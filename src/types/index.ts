@@ -181,8 +181,11 @@ export interface Exam {
   admitCardsGenerated: number;
   credentialsAssigned: number;
   syllabusScope: string;
-  // Present on the single-exam (detail) response, from the exam's centre.
+  // Joined from the exam's centre - present on both the list and the
+  // single-exam (detail) response; address/state/pincode/capacity/labs
+  // are detail-only (the list query doesn't need them).
   centreName?: string | null;
+  centreCode?: string | null;
   centreAddress?: string | null;
   centreCity?: string | null;
   centreState?: string | null;
@@ -243,7 +246,9 @@ export interface ExamCredential {
   studentName: string;
   examId: ID;
   loginId: string;
-  password: string;
+  // Never returned after the one-time assignment response (only a hash is
+  // stored) - absent on every row read back from the list/roster endpoints.
+  password?: string;
   status: CredentialStatus;
   assignedAt?: ISODate;
 }

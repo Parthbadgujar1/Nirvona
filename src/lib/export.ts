@@ -28,6 +28,59 @@ export function toCSV<T extends Record<string, unknown>>(rows: T[], columns: Exp
   return `${header}\n${body}`;
 }
 
+/**
+ * Parses the CSV this module itself writes (see toCSV/escapeCell): comma
+ * header + rows, double-quoted cells for anything containing a comma,
+ * quote or newline, doubled quotes as the escape. Handles a UTF-8 BOM
+ * (downloadFile prepends one) and CRLF/LF line endings, since a person
+ * may re-save the file in Excel before uploading it back.
+ */
+export function parseCSV(text: string): Record<string, string>[] {
+  const clean = text.replace(/^﻿/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+
+  function parseLine(line: string): string[] {
+    const cells: string[] = [];
+    let cur = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (line[i + 1] === '"') {
+            cur += '"';
+            i++;
+          } else {
+            inQuotes = false;
+          }
+        } else {
+          cur += ch;
+        }
+      } else if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ",") {
+        cells.push(cur);
+        cur = "";
+      } else {
+        cur += ch;
+      }
+    }
+    cells.push(cur);
+    return cells;
+  }
+
+  const lines = clean.split("\n").filter((l) => l.length > 0);
+  if (lines.length === 0) return [];
+  const header = parseLine(lines[0]).map((h) => h.trim());
+  return lines.slice(1).map((line) => {
+    const cells = parseLine(line);
+    const row: Record<string, string> = {};
+    header.forEach((key, i) => {
+      row[key] = (cells[i] ?? "").trim();
+    });
+    return row;
+  });
+}
+
 export function downloadFile(filename: string, content: string, mime = "text/csv;charset=utf-8;") {
   if (typeof window === "undefined") return;
   const blob = new Blob([`﻿${content}`], { type: mime });

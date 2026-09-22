@@ -6,7 +6,6 @@ import { Download, IdCard, Info, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
-import { Select } from "@/components/ui/select";
 import { PageHeader } from "@/components/shared/page-header";
 import { AdmitCardSheet } from "@/components/shared/admit-card";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/states";
@@ -14,9 +13,6 @@ import { useAsync } from "@/hooks/use-async";
 import { studentService } from "@/services/student.service";
 import { useCourses, usePackages } from "@/hooks/use-catalogue";
 import { exportRows, timestampedName } from "@/lib/export";
-import { formatDate } from "@/lib/format";
-
-const TODAY = new Date();
 
 export function AdmitCardPage() {
   const student = useAsync(() => studentService.me(), []);
@@ -30,16 +26,18 @@ export function AdmitCardPage() {
   const { getCourse } = useCourses();
   const { getPackage } = usePackages();
 
-  const eligible = React.useMemo(
-    () =>
-      (exams.data ?? []).filter(
-        (exam) => new Date(exam.date) >= TODAY && exam.status === "admit-card-available",
-      ),
-    [exams.data],
-  );
-
-  const [examId, setExamId] = React.useState<string>("");
-  const selected = eligible.find((e) => e.id === examId) ?? eligible[0];
+  // The single source of truth for "is a card ready" is admitCard.data
+  // itself (the backend only ever returns one, already published, or
+  // nothing at all - see the comment below). `selected` is just that
+  // card's own exam record, looked up by id, for the fields the card
+  // needs to render (reporting time, centre, ...) that the admit-card
+  // response itself doesn't carry. This used to instead require the
+  // exam's OWN status to be literally "admit-card-available" - a second,
+  // separate flag nothing ever set when admit cards were published, so
+  // a real published card never showed here.
+  const selected = admitCard.data
+    ? (exams.data ?? []).find((exam) => exam.id === admitCard.data!.examId)
+    : undefined;
 
   const centre = useAsync(
     () => (selected ? studentService.centre(selected.centreId) : Promise.resolve(undefined)),
@@ -65,7 +63,7 @@ export function AdmitCardPage() {
   // No admit card record yet is a normal, expected state (not an
   // error) - it's rendered the same "not published yet" empty state as
   // having no eligible exam at all, below.
-  const notYetAvailable = eligible.length === 0 || !admitCard.data;
+  const notYetAvailable = !admitCard.data || !selected;
 
   const activeEnrollment = enrollments.data?.find((e) => e.status === "active");
   const pkg = activeEnrollment ? getPackage(activeEnrollment.packageId) : undefined;
@@ -147,25 +145,6 @@ export function AdmitCardPage() {
         />
       ) : (
         <>
-          {eligible.length > 1 && (
-            <div className="no-print max-w-sm">
-              <label htmlFor="exam-select" className="mb-1.5 block text-sm font-medium text-ink-700">
-                Select examination
-              </label>
-              <Select
-                id="exam-select"
-                value={selected?.id ?? ""}
-                onChange={(e) => setExamId(e.target.value)}
-              >
-                {eligible.map((exam) => (
-                  <option key={exam.id} value={exam.id}>
-                    {exam.id} — {formatDate(exam.date)}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          )}
-
           <Alert tone="warning" className="no-print" title="Before you leave for the centre">
             <ul className="mt-1 grid gap-1 sm:grid-cols-2">
               <li>Print this admit card — a screen copy is not accepted at the gate.</li>

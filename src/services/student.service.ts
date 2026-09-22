@@ -118,10 +118,15 @@ export const studentService = {
   // than a bare /students/me/exam-credential (a route that was never
   // built because it has no exam to look up against; calling it 404'd
   // on every load).
+  //
+  // The id in the URL comes from the verified JWT (AuthMiddleware), not
+  // from `studentId` here - the unauthenticated /students/{id}/... routes
+  // this used to hit were removed as a security fix (anyone could read
+  // anyone else's exam-hall credential by changing the id in the URL);
+  // `studentId` stays a parameter only because the caller already has it
+  // to hand and it does no harm to keep the call shape explicit.
   examCredential: (studentId: string, examId: string) =>
-    resolveOptional(
-      resolve(STUDENT_EXAM_CREDENTIAL, `/students/${studentId}/exams/${examId}/credential`),
-    ),
+    resolveOptional(resolve(STUDENT_EXAM_CREDENTIAL, `/students/me/exams/${examId}/credential`)),
 
   // Notifications
   notifications: () => resolve(STUDENT_NOTIFICATIONS, "/students/me/notifications"),

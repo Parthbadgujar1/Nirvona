@@ -16,7 +16,6 @@ import {
   ADMIN_STATS,
   ADMIT_CARDS,
   CREDENTIAL_TEMPLATE_COLUMNS,
-  CREDENTIAL_UPLOAD_RESULT,
   EXAM_CANDIDATES,
   EXAM_CREDENTIALS,
   REPORTS,
@@ -102,6 +101,13 @@ export const adminService = {
       EXAM_CANDIDATES.filter((c) => c.examId === examId),
       `/admin/exams/${examId}/candidates`,
     ),
+  // Registers every actively-enrolled student of the exam's course who isn't
+  // already a candidate - the only way a roster gets built (nothing else adds
+  // a student to an exam), so admit cards/credentials have someone to target.
+  registerEnrolledCandidates: (
+    examId: string,
+  ): Promise<{ registered: number; alreadyRegistered: number }> =>
+    post(`/admin/exams/${examId}/candidates/register-enrolled`, {}),
   credentials: (examId: string) =>
     resolve(
       EXAM_CREDENTIALS.filter((c) => c.examId === examId),
@@ -155,9 +161,15 @@ export const adminService = {
   retryNotification: (id: string) => post(`/admin/notifications/${id}/retry`, {}),
   deleteNotification: (id: string): Promise<void> => del(`/admin/notifications/${id}`),
 
-  /** Validate credential upload against backend rules */
-  validateCredentialUpload: async (): Promise<UploadValidationResult> =>
-    resolve(CREDENTIAL_UPLOAD_RESULT, "/admin/credentials/validate", { method: "POST" }, 900),
+  // Bulk-assigns credentials from an uploaded roster. Validation (matching
+  // rows against the exam's real candidate list, flagging duplicates/blank
+  // fields) happens server-side, in the same code path a single assign()
+  // uses - so "duplicate" here means the same thing it means everywhere
+  // else in the app, not a second copy of that rule re-implemented client-side.
+  bulkAssignCredentials: (
+    examId: string,
+    rows: { row: number; studentId: string; studentName?: string; loginId: string; password: string }[],
+  ): Promise<UploadValidationResult> => post(`/admin/exams/${examId}/credentials/bulk`, { rows }),
 
   /** Exam-hall credential/admit-card revocation */
   revokeCredential: (id: string): Promise<void> => post(`/admin/credentials/${id}/revoke`, {}),
@@ -180,7 +192,6 @@ export const adminData = {
   COHORT_RESULTS,
   REPORTS,
   ADMIN_NOTIFICATIONS,
-  CREDENTIAL_UPLOAD_RESULT,
   CREDENTIAL_TEMPLATE_COLUMNS,
   REVENUE_TREND,
   REGISTRATION_TREND,

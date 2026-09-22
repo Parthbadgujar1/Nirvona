@@ -24,7 +24,6 @@ import { ExamFormDialog } from "./exam-form";
 import { useAsync } from "@/hooks/use-async";
 import { adminService } from "@/services/admin.service";
 import { useCourses } from "@/hooks/use-catalogue";
-import { getCentre } from "@/data/exams";
 import { formatDate, formatNumber } from "@/lib/format";
 import type { Exam, ExamStatus } from "@/types";
 
@@ -130,7 +129,6 @@ export function ExamsManager() {
       ) : (
         <StaggerGroup className="grid gap-5 xl:grid-cols-2">
           {filtered.map((exam) => {
-            const centre = getCentre(exam.centreId);
             const admitPct = exam.candidates ? (exam.admitCardsGenerated / exam.candidates) * 100 : 0;
             const credPct = exam.candidates ? (exam.credentialsAssigned / exam.candidates) * 100 : 0;
             return (
@@ -221,7 +219,12 @@ export function ExamsManager() {
                         { label: "Reporting", value: exam.reportingTime || "Not set" },
                         { label: "Exam time", value: exam.examTime || "Not set" },
                         { label: "Pattern", value: `${exam.totalQuestions} Q · ${exam.totalMarks} marks` },
-                        { label: "Centre", value: centre ? `${centre.city} (${centre.code})` : "—" },
+                        {
+                          label: "Centre",
+                          value: exam.centreName
+                            ? `${exam.centreName}${exam.centreCity ? ` — ${exam.centreCity}` : ""}`
+                            : "—",
+                        },
                         { label: "Scope", value: exam.syllabusScope || "Full syllabus" },
                       ].map((item) => (
                         <div key={item.label} className="min-w-0">

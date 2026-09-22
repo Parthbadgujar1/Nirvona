@@ -86,6 +86,10 @@ return function (App $app) {
         // Exam-day Operations: Candidates
         $group->get('/exams/{examId}/candidates', [ExamCandidateController::class, 'listByExam']);
         $group->post('/exams/{examId}/candidates', [ExamCandidateController::class, 'register']);
+        $group->post(
+            '/exams/{examId}/candidates/register-enrolled',
+            [ExamCandidateController::class, 'registerEnrolled']
+        );
         $group->put('/candidates/{id}/attendance', [ExamCandidateController::class, 'markAttendance']);
         $group->get('/exams/{examId}/attendance-summary', [ExamCandidateController::class, 'attendanceSummary']);
 
@@ -100,6 +104,7 @@ return function (App $app) {
         // Exam-day Operations: Credentials
         $group->get('/exams/{examId}/credentials', [ExamCredentialController::class, 'listByExam']);
         $group->post('/exams/{examId}/credentials', [ExamCredentialController::class, 'assign']);
+        $group->post('/exams/{examId}/credentials/bulk', [ExamCredentialController::class, 'bulkAssign']);
         $group->post('/credentials/{id}/revoke', [ExamCredentialController::class, 'revoke']);
 
         // Answer Keys

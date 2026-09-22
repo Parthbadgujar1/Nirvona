@@ -84,7 +84,16 @@ export function percent(value: number, digits = 1) {
   return `${value.toFixed(digits)}%`;
 }
 
-export function maskSecret(value: string, visible = 2) {
+/**
+ * A real backend never returns a stored secret (only a hash is kept, per
+ * ExamCredentialService's own doc comment: "Never returns a password hash
+ * to a caller") - so `value` is legitimately absent on any row read back
+ * after the one-time assignment response. That used to crash this
+ * function (`.length` on undefined), which took the whole admin app down
+ * the first time a real credential existed to render.
+ */
+export function maskSecret(value: string | null | undefined, visible = 2) {
+  if (!value) return "—";
   if (value.length <= visible) return "•".repeat(8);
   return `${value.slice(0, visible)}${"•".repeat(Math.max(6, value.length - visible))}`;
 }

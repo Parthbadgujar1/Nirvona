@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { Download, IdCard, KeyRound, MapPin, Users } from "lucide-react";
+import { Download, IdCard, KeyRound, MapPin, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -26,6 +26,30 @@ export function ExamCandidates({ examId }: { examId: string }) {
   // every exam's candidate roster page showed CBT-04's candidates (or
   // none), regardless of which exam was actually open.
   const candidates = useAsync(() => adminService.candidates(examId), [examId]);
+  const [registering, setRegistering] = React.useState(false);
+
+  async function registerEnrolled() {
+    setRegistering(true);
+    try {
+      const result = await adminService.registerEnrolledCandidates(examId);
+      candidates.reload();
+      exam.reload();
+      if (result.registered > 0) {
+        toast.success(`${result.registered} candidate(s) registered`, {
+          description: "Actively-enrolled students for this course who were not already candidates.",
+        });
+      } else {
+        toast.info("No new candidates to add", {
+          description: "Every actively-enrolled student for this course is already registered.",
+        });
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not register candidates.");
+    } finally {
+      setRegistering(false);
+    }
+  }
+
   const [search, setSearch] = React.useState("");
   const [filters, setFilters] = React.useState<Record<string, string>>({
     admit: "all",
@@ -117,6 +141,10 @@ export function ExamCandidates({ examId }: { examId: string }) {
         ]}
         actions={
           <>
+            <Button variant="secondary" size="md" onClick={registerEnrolled} loading={registering}>
+              <UserPlus />
+              Register enrolled students
+            </Button>
             <Button
               variant="secondary"
               size="md"
@@ -291,6 +319,13 @@ export function ExamCandidates({ examId }: { examId: string }) {
 
       {candidates.status === "loading" ? (
         <LoadingState label="Loading candidates" />
+      ) : rows.length === 0 ? (
+        <EmptyState
+          icon={UserPlus}
+          title="No candidates registered yet"
+          description="Register every actively-enrolled student of this exam's course as a candidate, then generate admit cards and assign credentials."
+          action={{ label: "Register enrolled students", onClick: registerEnrolled }}
+        />
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={Users}

@@ -3,6 +3,7 @@
 namespace Nirvona\Services;
 
 use Nirvona\Repositories\ExamCredentialRepository;
+use Nirvona\Repositories\ExamCandidateRepository;
 use Nirvona\Exceptions\ServiceException;
 
 /**
@@ -14,14 +15,17 @@ use Nirvona\Exceptions\ServiceException;
 class ExamCredentialService extends BaseService
 {
     private ExamCredentialRepository $examCredentialRepository;
+    private ExamCandidateRepository $examCandidateRepository;
 
     public function __construct(
         ExamCredentialRepository $examCredentialRepository,
+        ExamCandidateRepository $examCandidateRepository,
         \Psr\Log\LoggerInterface $logger,
         CircuitBreaker $circuitBreaker
     ) {
         parent::__construct($logger, $circuitBreaker);
         $this->examCredentialRepository = $examCredentialRepository;
+        $this->examCandidateRepository = $examCandidateRepository;
     }
 
     /**
@@ -138,6 +142,132 @@ class ExamCredentialService extends BaseService
             },
             null,
             'assignCredential'
+        );
+    }
+
+    /**
+     * Bulk-assign credentials from an uploaded roster (the "upload a
+     * workbook, validate, map" admin workflow). Each row is run through
+     * the exact same assign() above - so a row that is already assigned
+     * comes back "duplicate" for the same reason a single assign() call
+     * would fail, not a second, drifting copy of that rule.
+     *
+     * @param string $examId
+     * @param array<int, array{row?: int, studentId?: string, studentName?: string, loginId?: string, password?: string}> $rows
+     * @return array
+     */
+    public function bulkAssign(string $examId, array $rows): array
+    {
+        return $this->executeWithFallback(
+            function () use ($examId, $rows) {
+                $candidateIds = array_column($this->examCandidateRepository->getByExam($examId), 'studentId');
+                $candidateSet = array_flip($candidateIds);
+
+                $successful = 0;
+                $duplicate = 0;
+                $invalid = 0;
+                $missingStudentId = 0;
+                $problems = [];
+                $seenLoginIds = [];
+
+                foreach ($rows as $i => $row) {
+                    $rowNumber = $row['row'] ?? ($i + 2); // +2: header row + 1-indexed
+                    $studentId = trim((string) ($row['studentId'] ?? ''));
+                    $loginId = trim((string) ($row['loginId'] ?? ''));
+                    $password = (string) ($row['password'] ?? '');
+
+                    if ($studentId === '') {
+                        $missingStudentId++;
+                        $problems[] = [
+                            'row' => $rowNumber, 'studentId' => '', 'studentName' => $row['studentName'] ?? '—',
+                            'loginId' => $loginId, 'status' => 'invalid', 'message' => 'Student ID column is empty',
+                        ];
+                        continue;
+                    }
+
+                    if (!isset($candidateSet[$studentId])) {
+                        $invalid++;
+                        $problems[] = [
+                            'row' => $rowNumber, 'studentId' => $studentId, 'studentName' => $row['studentName'] ?? '—',
+                            'loginId' => $loginId, 'status' => 'invalid',
+                            'message' => 'Student ID not found in this exam\'s candidate list',
+                        ];
+                        continue;
+                    }
+
+                    if ($loginId === '' || $password === '') {
+                        $invalid++;
+                        $problems[] = [
+                            'row' => $rowNumber, 'studentId' => $studentId, 'studentName' => $row['studentName'] ?? '—',
+                            'loginId' => $loginId, 'status' => 'invalid',
+                            'message' => $loginId === '' ? 'Exam Login ID column is empty' : 'Exam Password column is empty',
+                        ];
+                        continue;
+                    }
+
+                    if (strlen($password) < 8 || strlen($password) > 16) {
+                        $invalid++;
+                        $problems[] = [
+                            'row' => $rowNumber, 'studentId' => $studentId, 'studentName' => $row['studentName'] ?? '—',
+                            'loginId' => $loginId, 'status' => 'invalid',
+                            'message' => 'Password must be 8-16 characters',
+                        ];
+                        continue;
+                    }
+
+                    $loginKey = strtolower($loginId);
+                    if (isset($seenLoginIds[$loginKey])) {
+                        $duplicate++;
+                        $problems[] = [
+                            'row' => $rowNumber, 'studentId' => $studentId, 'studentName' => $row['studentName'] ?? '—',
+                            'loginId' => $loginId, 'status' => 'duplicate',
+                            'message' => 'Duplicate login ID within uploaded file',
+                        ];
+                        continue;
+                    }
+                    $seenLoginIds[$loginKey] = true;
+
+                    $result = $this->assign([
+                        'studentId' => $studentId,
+                        'examId' => $examId,
+                        'studentName' => $row['studentName'] ?? null,
+                        'loginId' => $loginId,
+                        'password' => $password,
+                    ]);
+
+                    if ($result['success'] ?? false) {
+                        $successful++;
+                    } else {
+                        $message = is_array($result['error'] ?? null)
+                            ? ($result['error']['message'] ?? 'Could not assign this credential')
+                            : ($result['error'] ?? 'Could not assign this credential');
+                        $isDuplicate = str_contains((string) $message, 'already assigned');
+                        $isDuplicate ? $duplicate++ : $invalid++;
+                        $problems[] = [
+                            'row' => $rowNumber, 'studentId' => $studentId, 'studentName' => $row['studentName'] ?? '—',
+                            'loginId' => $loginId, 'status' => $isDuplicate ? 'duplicate' : 'invalid',
+                            'message' => $message,
+                        ];
+                    }
+                }
+
+                $this->auditLog('BULK_ASSIGN', 'Exam', $examId, ['successful' => $successful, 'rows' => count($rows)]);
+
+                return [
+                    'success' => true,
+                    'data' => [
+                        'processed' => count($rows),
+                        'successful' => $successful,
+                        'duplicate' => $duplicate,
+                        'invalid' => $invalid,
+                        'missingStudentId' => $missingStudentId,
+                        'rows' => $problems,
+                    ],
+                    'message' => "{$successful} of " . count($rows) . ' credential(s) assigned',
+                ];
+            },
+            null,
+            'bulkAssignCredentials'
         );
     }
 

@@ -44,6 +44,17 @@ class ExamCandidateController
     }
 
     /**
+     * POST /api/admin/exams/{examId}/candidates/register-enrolled
+     */
+    public function registerEnrolled(Request $request, Response $response, array $args): Response
+    {
+        $result = $this->examCandidateService->registerEnrolled($args['examId']);
+        $statusCode = $result['success'] ? 200 : 400;
+        $response->getBody()->write(json_encode($result));
+        return $response->withStatus($statusCode)->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
      * PUT /api/admin/candidates/{id}/attendance
      */
     public function markAttendance(Request $request, Response $response, array $args): Response

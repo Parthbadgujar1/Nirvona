@@ -45,12 +45,16 @@ class ExamRepository extends BaseRepository
     {
         $stmt = $this->db->prepare(
             "SELECT e.*,
-                    (SELECT COUNT(*) FROM exam_candidates ec WHERE ec.examId = e.id) AS candidates,
+                    ec.name AS centreName,
+                    ec.city AS centreCity,
+                    ec.code AS centreCode,
+                    (SELECT COUNT(*) FROM exam_candidates x WHERE x.examId = e.id) AS candidates,
                     (SELECT COUNT(*) FROM admit_cards ac
                       WHERE ac.examId = e.id AND ac.status IN ('generated', 'published', 'sent')) AS admitCardsGenerated,
                     (SELECT COUNT(*) FROM exam_credentials xc
                       WHERE xc.examId = e.id AND xc.status <> 'revoked') AS credentialsAssigned
              FROM {$this->table} e
+             LEFT JOIN exam_centres ec ON e.centreId = ec.id
              ORDER BY e.date DESC, e.id
              LIMIT ? OFFSET ?"
         );
@@ -61,10 +65,12 @@ class ExamRepository extends BaseRepository
     public function getUpcoming(): array
     {
         return $this->select(
-            "SELECT * FROM {$this->table}
-             WHERE date > NOW()
-             AND status IN ('scheduled', 'admit-card-available')
-             ORDER BY date ASC
+            "SELECT e.*, ec.name AS centreName, ec.city AS centreCity, ec.code AS centreCode
+             FROM {$this->table} e
+             LEFT JOIN exam_centres ec ON e.centreId = ec.id
+             WHERE e.date > NOW()
+             AND e.status IN ('scheduled', 'admit-card-available')
+             ORDER BY e.date ASC
              LIMIT 10"
         );
     }

@@ -157,7 +157,17 @@ export function AdmitCardSheet({
           <>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <CopyField tone="dark" label="Exam Login ID" value={credential.loginId} />
-              <CopyField tone="dark" label="Exam Password" value={credential.password} secret />
+              {credential.password ? (
+                <CopyField tone="dark" label="Exam Password" value={credential.password} secret />
+              ) : (
+                <div className="rounded-lg border border-white/15 bg-white/5 p-3">
+                  <p className="text-2xs font-bold uppercase tracking-wider text-white/60">Exam Password</p>
+                  <p className="mt-1.5 text-xs leading-relaxed text-white/70">
+                    Shared with you separately when it was issued. Contact support if you no longer
+                    have it — it cannot be displayed here again.
+                  </p>
+                </div>
+              )}
             </div>
             <div className="mt-4 flex gap-2.5 rounded-lg bg-white/[0.06] p-3.5 ring-1 ring-inset ring-white/10">
               <ShieldAlert className="mt-0.5 size-4 shrink-0 text-saffron-300" aria-hidden />
