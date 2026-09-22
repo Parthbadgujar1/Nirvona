@@ -53,6 +53,7 @@ export const publicNav = [
   { label: "About", href: "/about" },
   { label: "CBT Exams", href: "/cbt" },
   { label: "Programs", href: "/courses" },
+  { label: "Test Schedule", href: "/test-schedule" },
   { label: "Packages", href: "/packages" },
   { label: "FAQs", href: "/faqs" },
   { label: "Contact", href: "/contact" },

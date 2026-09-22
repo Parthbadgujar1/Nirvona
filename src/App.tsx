@@ -33,6 +33,7 @@ const CourseDetailPage = lazy(() => import("@/pages/site/course-detail"));
 const FaqsPage = lazy(() => import("@/pages/site/faqs"));
 const PackagesPage = lazy(() => import("@/pages/site/packages"));
 const PackageDetailPage = lazy(() => import("@/pages/site/package-detail"));
+const TestSchedulePage = lazy(() => import("@/pages/site/test-schedule"));
 
 const LoginPage = lazy(() => import("@/pages/auth/login"));
 const RegisterPage = lazy(() => import("@/pages/auth/register"));
@@ -118,6 +119,7 @@ export function App() {
           <Route path="/faqs" element={<FaqsPage />} />
           <Route path="/packages" element={<PackagesPage />} />
           <Route path="/packages/:id" element={<PackageDetailPage />} />
+          <Route path="/test-schedule" element={<TestSchedulePage />} />
         </Route>
 
         <Route element={<AuthLayout />}>

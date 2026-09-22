@@ -95,6 +95,44 @@ export interface FAQ {
   a: string;
 }
 
+/* -------------------------- MIP test schedule ------------------------- */
+// Sourced from the client-supplied MIP Planner 2026-2027 workbook - a real
+// test-by-test calendar per cohort/tier, distinct from the generic
+// `Course.syllabus` unit list above. Purely informational content (not tied
+// to the DB-backed Course/Package/checkout model).
+
+export type ScheduleTier = "Basic" | "Pro" | "Pro Max";
+export type ScheduleClassLevel = "11th" | "12th" | "Dropper";
+export type ScheduleStream = "JEE" | "NEET";
+export type ScheduleLanguage = "English" | "Hindi";
+
+export interface ScheduledTest {
+  sNo: number;
+  testName: string;
+  /** ISO yyyy-mm-dd, or null for a not-yet-scheduled entry (e.g. the VP Mastery series). */
+  date: string | null;
+  dateLabel: string | null;
+  testNumber: string;
+  testType: string;
+  testPattern: string;
+  mode: string;
+  /** Subject name -> chapters/topics covered in that test. */
+  subjects: Record<string, string>;
+  note?: string | null;
+}
+
+export interface CohortTestSchedule {
+  id: string;
+  sheetName: string;
+  cohortLabel: string;
+  classLevel: ScheduleClassLevel;
+  stream: ScheduleStream;
+  tier: ScheduleTier;
+  language: ScheduleLanguage;
+  testCount: number;
+  tests: ScheduledTest[];
+}
+
 /* ------------------------------ Packages ----------------------------- */
 
 export type PackageDuration = "3M" | "6M" | "1Y" | "2Y";

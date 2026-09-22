@@ -16,6 +16,7 @@ const buildColumns = (courses: Course[]) => [
     title: "Platform",
     links: [
       { label: "How CBT works", href: "/cbt" },
+      { label: "Test schedule", href: "/test-schedule" },
       { label: "Packages & pricing", href: "/packages" },
       { label: "Student portal", href: "/student/dashboard" },
       { label: "Admin portal", href: "/admin/dashboard" },
@@ -51,13 +52,13 @@ export function Footer() {
                 <span>
                   Nirvona Education Tech Pvt. Ltd.
                   <br />
-                  Malviya Nagar, Jaipur, Rajasthan 302017
+                  Chhatrapati Sambhajinagar, Maharashtra
                 </span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Phone className="size-4 shrink-0 text-saffron-400" aria-hidden />
-                <a href="tel:+911414002200" className="transition-colors hover:text-white">
-                  +91 141 400 2200
+                <a href="tel:+917709766717" className="transition-colors hover:text-white">
+                  +91 77097 66717
                 </a>
               </li>
               <li className="flex items-center gap-2.5">

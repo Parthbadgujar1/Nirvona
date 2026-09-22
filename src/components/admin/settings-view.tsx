@@ -92,13 +92,13 @@ export function SettingsView() {
                   <Input id="org-email" type="email" defaultValue="support@nirvona.edu.in" />
                 </Field>
                 <Field label="Support phone" htmlFor="org-phone">
-                  <Input id="org-phone" defaultValue="+91 141 400 2200" />
+                  <Input id="org-phone" defaultValue="+91 77097 66717" />
                 </Field>
                 <Field label="Registered address" htmlFor="org-address" className="sm:col-span-2">
                   <Textarea
                     id="org-address"
                     rows={3}
-                    defaultValue={"Plot 44, Sector 6, Malviya Nagar Industrial Area\nJaipur, Rajasthan 302017"}
+                    defaultValue={"Chhatrapati Sambhajinagar, Maharashtra"}
                   />
                 </Field>
               </div>

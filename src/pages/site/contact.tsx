@@ -7,9 +7,9 @@ import { EXAM_CENTRES } from "@/data/exams";
 import { usePageTitle } from "@/hooks/use-page-title";
 
 const CHANNELS = [
-  { icon: Phone, label: "Call us", value: "+91 141 400 2200", href: "tel:+911414002200", note: "Mon–Sat, 9:00 AM – 7:00 PM IST" },
+  { icon: Phone, label: "Call us", value: "+91 77097 66717", href: "tel:+917709766717", note: "Mon–Sat, 9:00 AM – 7:00 PM IST" },
   { icon: Mail, label: "Email us", value: "support@nirvona.edu.in", href: "mailto:support@nirvona.edu.in", note: "Replies within one working day" },
-  { icon: MessageSquare, label: "WhatsApp", value: "+91 98290 00220", href: "https://wa.me/919829000220", note: "Exam-day support until 8:00 PM" },
+  { icon: MessageSquare, label: "WhatsApp", value: "+91 77097 66717", href: "https://wa.me/917709766717", note: "Exam-day support until 8:00 PM" },
 ];
 
 export default function ContactPage() {
@@ -70,9 +70,7 @@ export default function ContactPage() {
                 <address className="mt-3 not-italic text-sm leading-relaxed text-ink-600">
                   Nirvona Education Tech Pvt. Ltd.
                   <br />
-                  Plot 44, Sector 6, Malviya Nagar Industrial Area
-                  <br />
-                  Jaipur, Rajasthan 302017
+                  Chhatrapati Sambhajinagar, Maharashtra
                   <br />
                   India
                 </address>

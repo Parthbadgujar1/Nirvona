@@ -62,9 +62,7 @@ export function Receipt({
             Nirvona Education Tech Pvt. Ltd.
           </p>
           <address className="mt-1 not-italic text-sm leading-relaxed text-ink-600">
-            Plot 44, Sector 6, Malviya Nagar
-            <br />
-            Jaipur, Rajasthan 302017
+            Chhatrapati Sambhajinagar, Maharashtra
             <br />
             GSTIN: 08AABCN1234F1Z5
             <br />

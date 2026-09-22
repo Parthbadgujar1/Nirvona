@@ -8,8 +8,8 @@ import { HOME_FAQS } from "@/data/site";
 import { usePageTitle } from "@/hooks/use-page-title";
 
 const CHANNELS = [
-  { icon: Phone, label: "Call support", value: "+91 141 400 2200", href: "tel:+911414002200", note: "Mon–Sat, 9 AM – 7 PM IST" },
-  { icon: MessageSquare, label: "WhatsApp", value: "+91 98290 00220", href: "https://wa.me/919829000220", note: "Exam-day support until 8 PM" },
+  { icon: Phone, label: "Call support", value: "+91 77097 66717", href: "tel:+917709766717", note: "Mon–Sat, 9 AM – 7 PM IST" },
+  { icon: MessageSquare, label: "WhatsApp", value: "+91 77097 66717", href: "https://wa.me/917709766717", note: "Exam-day support until 8 PM" },
   { icon: Mail, label: "Email", value: "support@nirvona.edu.in", href: "mailto:support@nirvona.edu.in", note: "Replies within one working day" },
 ];
 
