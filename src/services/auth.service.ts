@@ -12,6 +12,7 @@ export interface RegisterRequest {
   email: string;
   mobile: string;
   dateOfBirth?: string;
+  gender?: string;
   examPreference?: string;
   className: string;
   school: string;

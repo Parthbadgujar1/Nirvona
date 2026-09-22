@@ -30,6 +30,7 @@ interface FormState {
   mobile: string;
   email: string;
   dateOfBirth: string;
+  gender: string;
   className: string;
   school: string;
   city: string;
@@ -41,7 +42,7 @@ interface FormState {
 }
 
 const EMPTY: FormState = {
-  fullName: "", mobile: "", email: "", dateOfBirth: "",
+  fullName: "", mobile: "", email: "", dateOfBirth: "", gender: "",
   className: "Class 11", school: "", city: "", state: "",
   examPreference: "", password: "", confirmPassword: "", terms: false,
 };
@@ -273,6 +274,14 @@ export function RegisterWizard() {
                     leading={<Mail />}
                     invalid={Boolean(errors.email)}
                   />
+                </Field>
+                <Field label="Gender" htmlFor="gender" hint="Optional.">
+                  <Select id="gender" value={values.gender} onChange={(e) => set("gender", e.target.value)}>
+                    <option value="">Prefer not to say</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </Select>
                 </Field>
               </>
             )}

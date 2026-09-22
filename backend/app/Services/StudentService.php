@@ -67,6 +67,19 @@ class StudentService extends BaseService
                     );
                 }
 
+                // Optional at sign-up, same three values the profile editor and
+                // the admin edit dialog accept.
+                if (
+                    !empty($data['gender'])
+                    && !in_array($data['gender'], ['male', 'female', 'other'], true)
+                ) {
+                    throw new ServiceException(
+                        "Invalid gender",
+                        'StudentService',
+                        false
+                    );
+                }
+
                 // Check if email already exists
                 if ($this->studentRepository->findByEmail($data['email'])) {
                     throw new ServiceException(
@@ -93,6 +106,7 @@ class StudentService extends BaseService
                     'mobile' => $data['mobile'],
                     'dateOfBirth' => $dateOfBirth,
                     'className' => $data['className'],
+                    'gender' => !empty($data['gender']) ? $data['gender'] : null,
                     'school' => $data['school'] ?? null,
                     'city' => $data['city'] ?? null,
                     'state' => $data['state'] ?? null,

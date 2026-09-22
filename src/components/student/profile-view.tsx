@@ -49,6 +49,7 @@ export function ProfileView() {
     mobile: data.mobile ?? "",
     dateOfBirth: (data.dateOfBirth ?? "").slice(0, 10),
     className: data.className ?? "",
+    gender: data.gender ?? "",
     school: data.school ?? "",
     city: data.city ?? "",
     state: data.state ?? "",
@@ -226,6 +227,18 @@ export function ProfileView() {
                     ).map((option) => (
                       <option key={option} value={option}>{option}</option>
                     ))}
+                  </Select>
+                </Field>
+                <Field label="Gender" htmlFor="p-gender">
+                  <Select
+                    id="p-gender"
+                    value={form.gender ?? ""}
+                    onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value }))}
+                  >
+                    <option value="">Prefer not to say</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
                   </Select>
                 </Field>
               </div>
