@@ -1,22 +1,22 @@
-import { Clock, Mail, MapPin, MessageSquare, Phone } from "lucide-react";
+import * as React from "react";
+import { Clock, Mail, MapPin, MessageSquare, Phone, UserRound } from "lucide-react";
 import { ContactForm } from "@/components/public/contact-form";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { SectionHeading } from "@/components/shared/section-heading";
-import { EXAM_CENTRES } from "@/data/exams";
 import { usePageTitle } from "@/hooks/use-page-title";
-
-const CHANNELS = [
-  { icon: Phone, label: "Call us", value: "+91 77097 66717", href: "tel:+917709766717", note: "Mon–Sat, 9:00 AM – 7:00 PM IST" },
-  { icon: Mail, label: "Email us", value: "support@nirvona.edu.in", href: "mailto:support@nirvona.edu.in", note: "Replies within one working day" },
-  { icon: MessageSquare, label: "WhatsApp", value: "+91 77097 66717", href: "https://wa.me/917709766717", note: "Exam-day support until 8:00 PM" },
-];
+import { useSiteSettings } from "@/hooks/use-site-settings";
 
 export default function ContactPage() {
   usePageTitle(
     "Contact",
     "Reach the Nirvona Education Tech team for program, payment, examination or partnership enquiries.",
   );
+  const site = useSiteSettings();
+  const CHANNELS = [
+    { icon: Phone, label: "Call us", value: site.phone, href: site.phoneHref, note: "Mon–Sat, 9:00 AM – 7:00 PM IST" },
+    { icon: Mail, label: "Email us", value: site.settings.email, href: site.emailHref, note: "Replies within one working day" },
+    { icon: MessageSquare, label: "WhatsApp", value: site.whatsapp, href: site.whatsappHref, note: "Exam-day support until 8:00 PM" },
+  ];
   return (
     <>
       <section className="relative overflow-hidden border-b border-ink-200 bg-navy-950 py-16 text-white lg:py-20">
@@ -68,12 +68,20 @@ export default function ContactPage() {
                   </h2>
                 </div>
                 <address className="mt-3 not-italic text-sm leading-relaxed text-ink-600">
-                  Nirvona Education Tech Pvt. Ltd.
-                  <br />
-                  Chhatrapati Sambhajinagar, Maharashtra
-                  <br />
-                  India
+                  {site.settings.orgName}
+                  {site.addressLines.map((line) => (
+                    <React.Fragment key={line}>
+                      <br />
+                      {line}
+                    </React.Fragment>
+                  ))}
                 </address>
+                {site.settings.contactPersonName && (
+                  <p className="mt-3 flex items-center gap-2 text-sm text-ink-600">
+                    <UserRound className="size-4 text-ink-400" aria-hidden />
+                    Contact person: <span className="font-semibold text-navy-900">{site.settings.contactPersonName}</span>
+                  </p>
+                )}
                 <p className="mt-4 flex items-center gap-2 text-xs text-ink-500">
                   <Clock className="size-3.5" aria-hidden />
                   Office hours: Monday to Saturday, 9:00 AM – 7:00 PM IST
@@ -81,58 +89,6 @@ export default function ContactPage() {
               </Card>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section className="section-pad bg-canvas">
-        <div className="container-nv">
-          <SectionHeading
-            eyebrow="Examination centres"
-            title="Where Nirvona examinations are held"
-            description="Centre allocation is confirmed on your admit card. Do not visit a centre without an admit card for that examination."
-          />
-          <ul className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {EXAM_CENTRES.map((centre) => (
-              <li key={centre.id}>
-                <Card className="flex h-full flex-col p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="font-display text-xs font-bold uppercase tracking-wider text-ember-600">
-                      {centre.code}
-                    </span>
-                    <Badge tone={centre.status === "active" ? "success" : "neutral"} size="sm">
-                      {centre.status === "active" ? "Active" : "Temporarily closed"}
-                    </Badge>
-                  </div>
-                  <h3 className="mt-3 font-display text-base font-semibold leading-snug text-navy-900">
-                    {centre.name}
-                  </h3>
-                  <address className="mt-2 flex-1 not-italic text-sm leading-relaxed text-ink-500">
-                    {centre.address}
-                    <br />
-                    {centre.city}, {centre.state} {centre.pincode}
-                  </address>
-                  <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-ink-100 pt-4 text-xs">
-                    <div>
-                      <dt className="text-ink-400">Capacity</dt>
-                      <dd className="mt-0.5 font-semibold tabular text-navy-900">
-                        {centre.capacity}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-ink-400">Labs</dt>
-                      <dd className="mt-0.5 font-semibold tabular text-navy-900">{centre.labs}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-ink-400">Contact</dt>
-                      <dd className="mt-0.5 truncate font-semibold text-navy-900">
-                        {centre.contact.replace("+91 ", "")}
-                      </dd>
-                    </div>
-                  </dl>
-                </Card>
-              </li>
-            ))}
-          </ul>
         </div>
       </section>
     </>

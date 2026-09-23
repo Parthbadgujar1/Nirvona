@@ -82,9 +82,11 @@ export default function CoursePage() {
                 <Badge tone="onDark" size="md">
                   Max {course.maxDurationMonths / 12} year package
                 </Badge>
-                <Badge tone="onDark" size="md">
-                  {course.totalTests} CBT examinations
-                </Badge>
+                {course.totalTests > 0 && (
+                  <Badge tone="onDark" size="md">
+                    {course.totalTests} tests to come
+                  </Badge>
+                )}
               </div>
 
               <h1 className="mt-5 font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-white lg:text-[3rem]">
@@ -106,6 +108,9 @@ export default function CoursePage() {
                 </Button>
                 <Button asChild variant="onDark" size="lg">
                   <Link to="#syllabus">Syllabus & pattern</Link>
+                </Button>
+                <Button asChild variant="onDark" size="lg">
+                  <Link to="/test-schedule">Test schedule</Link>
                 </Button>
               </div>
             </div>
@@ -314,11 +319,17 @@ export default function CoursePage() {
                 : `${course.shortName} is a single-session program, so packages are capped at 12 months.`
             }
           />
-          <div className="mt-14 grid items-stretch gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {packages.map((pkg) => (
-              <PackageCard key={pkg.id} pkg={pkg} courseName={course.shortName} />
-            ))}
-          </div>
+          {packages.length === 0 ? (
+            <p className="mt-14 rounded-xl border border-dashed border-ink-200 p-8 text-center text-sm text-ink-500">
+              Plans for this program will be available soon.
+            </p>
+          ) : (
+            <div className="mt-14 grid items-stretch gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {packages.map((pkg) => (
+                <PackageCard key={pkg.id} pkg={pkg} courseName={course.shortName} />
+              ))}
+            </div>
+          )}
 
           <div className="mt-10 grid gap-5 rounded-2xl border border-ink-200 bg-canvas p-6 sm:grid-cols-3 lg:p-8">
             <div className="flex gap-3">

@@ -177,5 +177,62 @@ foreach (['admins' => 'admin', 'students' => 'student'] as $table => $kind) {
     }
 }
 
+echo "== 9. Settings, coupons, change requests, schedule ==\n";
+$adminOnly = [
+    ['GET', '/api/admin/site-settings'], ['PUT', '/api/admin/site-settings'], ['PUT', '/api/admin/me/password'],
+    ['GET', '/api/admin/coupons'], ['POST', '/api/admin/coupons'],
+    ['PUT', '/api/admin/coupons/00000000-0000-0000-0000-000000000000'],
+    ['DELETE', '/api/admin/coupons/00000000-0000-0000-0000-000000000000'],
+    ['GET', '/api/admin/change-requests'],
+    ['POST', '/api/admin/change-requests/00000000-0000-0000-0000-000000000000/approve'],
+    ['POST', '/api/admin/change-requests/00000000-0000-0000-0000-000000000000/reject'],
+];
+foreach ($adminOnly as [$m, $p]) {
+    $body = in_array($m, ['GET', 'DELETE'], true) ? null : '{}';
+    [$sAnon] = call($m, $base . $p, null, $body);
+    [$sStudent] = call($m, $base . $p, $tokenA, $body);
+    check("{$m} {$p} anonymous is 401 (got {$sAnon})", $sAnon === 401);
+    check("{$m} {$p} as student is 403 (got {$sStudent})", $sStudent === 403);
+}
+foreach (['/api/students/me/change-requests', '/api/students/me/test-schedule'] as $p) {
+    [$s] = call('GET', $base . $p);
+    check("GET {$p} without a token is 401 (got {$s})", $s === 401);
+}
+[$s] = call('POST', $base . '/api/students/me/payments/quote', null, '{}');
+check("POST /api/students/me/payments/quote without a token is 401 (got {$s})", $s === 401);
+
+// Students cannot edit their own profile any more (only notification prefs).
+$before = $pdo->query("SELECT fullName FROM students WHERE id = " . $pdo->quote($studentA))->fetchColumn();
+foreach (['PUT /api/students/me', 'PUT /api/student/profile'] as $route) {
+    [$m, $p] = explode(' ', $route);
+    [$s] = call($m, $base . $p, $tokenA, ['fullName' => 'Changed By Student', 'mobile' => '9999999999', 'status' => 'inactive']);
+    check("{$route} with profile fields is refused (got {$s})", $s === 403);
+}
+$after = $pdo->query("SELECT fullName FROM students WHERE id = " . $pdo->quote($studentA))->fetchColumn();
+check('student name was not changed by the refused edits', $before === $after);
+
+// Change requests: only whitelisted fields, and never someone else's data.
+[$s, $b] = call('POST', $base . '/api/students/me/change-requests', $tokenA, ['changes' => ['status' => 'active', 'passwordHash' => 'x']]);
+check("change request for a non-whitelisted field is refused (got {$s})", $s === 400 && !str_contains($b, '"status":"pending"'));
+
+// Public endpoints expose only what they should.
+[$s, $b] = call('GET', $base . '/api/courses/11th-jee/schedule?tier=Basic');
+check('public schedule works (got ' . $s . ')', $s === 200);
+check('public schedule never exposes the source calendar dates', !preg_match('/pwdate/i', $b));
+[$s, $b] = call('GET', $base . '/api/site-settings');
+$keys = array_keys((json_decode($b, true)['data'] ?? []));
+sort($keys);
+check('public site-settings exposes only the contact fields', $keys === ['address', 'contactPersonName', 'email', 'gstin', 'orgName', 'phone', 'whatsapp']);
+[$s, $b] = call('GET', $base . '/api/courses/11th-jee/schedule?tier=' . rawurlencode("Basic' OR '1'='1"));
+check("schedule tier is validated, not injected (got {$s})", $s === 404 || $s === 400);
+
+// Coupon guessing is throttled.
+$codes = [];
+for ($i = 0; $i < 24; $i++) {
+    [$s] = call('POST', $base . '/api/students/me/payments/quote', $tokenA, ['packageId' => '00000000-0000-0000-0000-000000000000', 'couponCode' => "GUESS{$i}"]);
+    $codes[] = $s;
+}
+check('coupon guessing is cut off with 429 (' . implode(',', array_unique($codes)) . ')', in_array(429, $codes, true));
+
 echo "\n" . ($failed === 0 ? "ALL CHECKS PASSED" : "{$failed} CHECK(S) FAILED") . "\n";
 exit($failed === 0 ? 0 : 1);

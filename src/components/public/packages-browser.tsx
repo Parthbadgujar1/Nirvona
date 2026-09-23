@@ -52,7 +52,7 @@ export function PackagesBrowser({
       <div
         role="tablist"
         aria-label="Select a program"
-        className="nv-scroll -mx-5 flex gap-2 overflow-x-auto px-5 pb-2 sm:mx-0 sm:justify-center sm:px-0"
+        className="nv-scroll -mx-5 flex gap-2 overflow-x-auto px-5 pb-2 sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0"
       >
         {courses.map((item) => (
           <button
@@ -78,9 +78,11 @@ export function PackagesBrowser({
           {course.tagline}
         </p>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-          <Badge tone="navy" size="sm">
-            {course.totalTests} CBT examinations
-          </Badge>
+          {course.totalTests > 0 && (
+            <Badge tone="navy" size="sm">
+              {course.totalTests} tests to come
+            </Badge>
+          )}
           <Badge tone="neutral" size="sm">
             {(course.subjects ?? []).length} subjects
           </Badge>
@@ -104,7 +106,7 @@ export function PackagesBrowser({
         >
           {filtered.length === 0 ? (
             <p className="col-span-full rounded-xl border border-dashed border-ink-200 p-8 text-center text-sm text-ink-500">
-              No packages are available for this program yet.
+              Plans for this program will be available soon. You can already see the upcoming tests on the Test Schedule page.
             </p>
           ) : (
             filtered.map((pkg) => (

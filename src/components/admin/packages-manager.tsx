@@ -39,6 +39,7 @@ const EMPTY_DRAFT = {
   price: "2999",
   originalPrice: "",
   discountPercent: "",
+  tier: "",
   tests: "6",
   recommended: false,
   status: "active",
@@ -108,6 +109,7 @@ export function PackagesManager() {
       price: String(pkg.price),
       originalPrice: pkg.originalPrice ? String(pkg.originalPrice) : "",
       discountPercent: pkg.discountPercent ? String(pkg.discountPercent) : "",
+      tier: pkg.tier ?? "",
       tests: String(pkg.tests),
       recommended: Boolean(pkg.recommended),
       status: pkg.status ?? "active",
@@ -124,6 +126,32 @@ export function PackagesManager() {
       },
     });
     setFormOpen(true);
+  }
+
+  /**
+   * Keep price / original price / discount % in step as the admin types:
+   * enter the discount % and the selling price follows; enter the selling
+   * price and the discount % follows. The field being edited always wins.
+   * (The server re-derives the stored values from the same rule.)
+   */
+  function setPricing(field: "price" | "originalPrice" | "discountPercent", value: string) {
+    setDraft((d) => {
+      const next = { ...d, [field]: value };
+      const original = Number(next.originalPrice);
+      if (!(original > 0)) return { ...next, discountPercent: field === "discountPercent" ? value : "" };
+      const fromPercent = () => {
+        const pct = Math.min(100, Math.max(0, Number(next.discountPercent) || 0));
+        return String(Math.round(original * (100 - pct)) / 100);
+      };
+      const fromPrice = () => {
+        const price = Math.max(0, Number(next.price) || 0);
+        return String(Math.max(0, Math.round(((original - price) / original) * 1000) / 10));
+      };
+      if (field === "discountPercent") return value === "" ? next : { ...next, price: fromPercent() };
+      if (field === "price") return value === "" ? { ...next, discountPercent: "" } : { ...next, discountPercent: fromPrice() };
+      // original price edited: keep the discount % if there is one, else derive it from the price
+      return next.discountPercent !== "" ? { ...next, price: fromPercent() } : next.price !== "" ? { ...next, discountPercent: fromPrice() } : next;
+    });
   }
 
   async function save(event: React.FormEvent) {
@@ -143,6 +171,7 @@ export function PackagesManager() {
         price: Number(draft.price) || 0,
         originalPrice: draft.originalPrice ? Number(draft.originalPrice) : null,
         discountPercent: draft.discountPercent ? Number(draft.discountPercent) : 0,
+        tier: draft.tier || null,
         tests: Number(draft.tests) || 0,
         recommended: draft.recommended,
         status: draft.status,
@@ -503,6 +532,23 @@ export function PackagesManager() {
                 </Select>
               </Field>
 
+              <Field
+                label="Plan (test schedule)"
+                htmlFor="p-tier"
+                hint="Links this package to that plan's test calendar. Students then only see the tests still to come."
+              >
+                <Select
+                  id="p-tier"
+                  value={draft.tier}
+                  onChange={(e) => setDraft((d) => ({ ...d, tier: e.target.value }))}
+                >
+                  <option value="">No test calendar</option>
+                  <option value="Basic">Basic</option>
+                  <option value="Pro">Pro</option>
+                  <option value="Pro Max">Pro Max</option>
+                </Select>
+              </Field>
+
               <Field label="Tagline" htmlFor="p-tagline">
                 <Input
                   id="p-tagline"
@@ -554,28 +600,28 @@ export function PackagesManager() {
               </div>
 
               <div className="grid gap-4 sm:grid-cols-3">
-                <Field label="Price (₹)" htmlFor="p-price" required>
+                <Field label="Selling price (₹)" htmlFor="p-price" required hint="What the student pays (before GST).">
                   <Input
                     id="p-price"
                     type="number"
                     value={draft.price}
-                    onChange={(e) => setDraft((d) => ({ ...d, price: e.target.value }))}
+                    onChange={(e) => setPricing("price", e.target.value)}
                   />
                 </Field>
-                <Field label="Original price (₹)" htmlFor="p-originalPrice" hint="Shown struck through">
+                <Field label="Original price (₹)" htmlFor="p-originalPrice" hint="Shown struck through.">
                   <Input
                     id="p-originalPrice"
                     type="number"
                     value={draft.originalPrice}
-                    onChange={(e) => setDraft((d) => ({ ...d, originalPrice: e.target.value }))}
+                    onChange={(e) => setPricing("originalPrice", e.target.value)}
                   />
                 </Field>
-                <Field label="Discount %" htmlFor="p-discount">
+                <Field label="Discount %" htmlFor="p-discount" hint="Fills the selling price for you, or is worked out from it.">
                   <Input
                     id="p-discount"
                     type="number"
                     value={draft.discountPercent}
-                    onChange={(e) => setDraft((d) => ({ ...d, discountPercent: e.target.value }))}
+                    onChange={(e) => setPricing("discountPercent", e.target.value)}
                   />
                 </Field>
               </div>

@@ -95,42 +95,86 @@ export interface FAQ {
   a: string;
 }
 
-/* -------------------------- MIP test schedule ------------------------- */
-// Sourced from the client-supplied MIP Planner 2026-2027 workbook - a real
-// test-by-test calendar per cohort/tier, distinct from the generic
-// `Course.syllabus` unit list above. Purely informational content (not tied
-// to the DB-backed Course/Package/checkout model).
+/* --------------------------- Test schedule -------------------------- */
+// Served by GET /courses/{slug}/schedule (public) and /students/me/test-schedule.
+// Only tests still to come are ever returned, dated by Nirvona's own exam
+// date. Purely informational - not part of the checkout model.
 
-export type ScheduleTier = "Basic" | "Pro" | "Pro Max";
-export type ScheduleClassLevel = "11th" | "12th" | "Dropper";
-export type ScheduleStream = "JEE" | "NEET";
-export type ScheduleLanguage = "English" | "Hindi";
+export type SchedulePlan = "Basic" | "Pro" | "Pro Max";
 
 export interface ScheduledTest {
   sNo: number;
   testName: string;
-  /** ISO yyyy-mm-dd, or null for a not-yet-scheduled entry (e.g. the VP Mastery series). */
-  date: string | null;
-  dateLabel: string | null;
-  testNumber: string;
-  testType: string;
-  testPattern: string;
-  mode: string;
+  /** ISO yyyy-mm-dd, or null for a series whose dates are announced later. */
+  examDate: string | null;
+  testNumber: string | null;
+  testType: string | null;
+  testPattern: string | null;
+  mode: string | null;
   /** Subject name -> chapters/topics covered in that test. */
   subjects: Record<string, string>;
-  note?: string | null;
+  note: string | null;
+  /** How many tests this row stands for (a "6-test series" row counts 6). */
+  testCount: number;
 }
 
-export interface CohortTestSchedule {
-  id: string;
-  sheetName: string;
-  cohortLabel: string;
-  classLevel: ScheduleClassLevel;
-  stream: ScheduleStream;
-  tier: ScheduleTier;
-  language: ScheduleLanguage;
-  testCount: number;
+export interface CourseSchedule {
+  tiers: { tier: SchedulePlan; upcomingTests: number }[];
+  tier: SchedulePlan | null;
   tests: ScheduledTest[];
+}
+
+export interface StudentPlanSchedule {
+  enrollmentId: ID;
+  courseSlug: CourseSlug;
+  courseName: string;
+  packageName: string;
+  tier: SchedulePlan;
+  tests: ScheduledTest[];
+}
+
+/* ------------------------- Settings / coupons ------------------------ */
+
+/** Organisation details the admin edits in Settings (public GET /site-settings). */
+export interface SiteSettings {
+  orgName: string;
+  gstin: string;
+  address: string;
+  contactPersonName: string;
+  phone: string;
+  whatsapp: string;
+  email: string;
+}
+
+export interface Coupon {
+  id: ID;
+  code: string;
+  percent: number;
+  description: string | null;
+  status: "active" | "inactive";
+  maxUses: number | null;
+  expiresAt: string | null;
+  usedCount: number;
+  createdAt: string;
+}
+
+export type ProfileChangeField =
+  | "fullName" | "email" | "mobile" | "dateOfBirth" | "gender" | "className"
+  | "school" | "city" | "state" | "address" | "guardianName" | "guardianMobile";
+
+export interface ProfileChangeRequest {
+  id: ID;
+  studentId?: ID;
+  studentName?: string;
+  studentEmail?: string;
+  changes: Partial<Record<ProfileChangeField, string>>;
+  /** What each requested field holds right now (admin view). */
+  current?: Partial<Record<ProfileChangeField, string | null>>;
+  reason: string | null;
+  status: "pending" | "approved" | "rejected";
+  adminNote: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
 }
 
 /* ------------------------------ Packages ----------------------------- */
@@ -148,6 +192,10 @@ export interface Package {
   originalPrice?: number;
   discountPercent?: number;
   tests: number;
+  /** Plan within a class/stream (Basic, Pro, Pro Max). */
+  tier?: SchedulePlan | null;
+  /** Tests still to come for this plan (what `tests` shows on public reads). */
+  upcomingTests?: number | null;
   recommended?: boolean;
   /** Public endpoints only ever return "active" packages; the admin listing includes retired ones. */
   status?: "active" | "inactive";

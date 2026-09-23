@@ -23,22 +23,16 @@ class PaymentService extends BaseService
     private PhonePeClient $phonePe;
     private EnrollmentService $enrollmentService;
 
-    /** Server-side coupon table - mirrors the frontend's (deliberately
-     * public/informational) checkout.service.ts COUPONS map. Recomputed
-     * here rather than trusting whatever discount percent the client
-     * sends, since the order amount is what actually gets charged. */
-    private const COUPONS = [
-        'NIRVONA10' => 10,
-        'FIRSTCBT' => 15,
-    ];
-
     private const GST_RATE = 0.18;
+
+    private CouponService $couponService;
 
     public function __construct(
         PaymentRepository $paymentRepository,
         PackageRepository $packageRepository,
         PhonePeClient $phonePe,
         EnrollmentService $enrollmentService,
+        CouponService $couponService,
         \Psr\Log\LoggerInterface $logger,
         CircuitBreaker $circuitBreaker
     ) {
@@ -47,6 +41,74 @@ class PaymentService extends BaseService
         $this->packageRepository = $packageRepository;
         $this->phonePe = $phonePe;
         $this->enrollmentService = $enrollmentService;
+        $this->couponService = $couponService;
+    }
+
+    /**
+     * The single source of truth for what a package costs at checkout:
+     * package price (already net of the package's own discount), less the
+     * admin-issued coupon percent (if any), plus GST. Used both for the
+     * live "apply coupon" preview and for the amount actually charged, so
+     * the two can never disagree. Throws a ServiceException with a
+     * student-safe message for an unusable coupon.
+     *
+     * @param array<string, mixed> $package
+     * @return array<string, mixed>
+     */
+    private function priceQuote(array $package, string $couponCode): array
+    {
+        $couponCode = CouponService::normalizeCode($couponCode);
+        $couponPercent = 0;
+        if ($couponCode !== '') {
+            $couponPercent = (int) $this->couponService->resolve($couponCode)['percent'];
+        }
+
+        $price = (float) $package['price'];
+        $listPrice = (float) ($package['originalPrice'] ?? $price);
+        $packageDiscount = max(0.0, $listPrice - $price);
+        $couponDiscount = round($price * $couponPercent / 100);
+        $taxableValue = $price - $couponDiscount;
+        $gst = round($taxableValue * self::GST_RATE);
+        $total = $taxableValue + $gst;
+
+        // The gateway cannot process an order below ₹1 (and a zero-price,
+        // not-yet-priced package must never be sold at all).
+        if ($price <= 0 || $total < 1) {
+            throw new ServiceException('This package cannot be purchased at the moment.', 'PaymentService', false);
+        }
+
+        return [
+            'couponCode' => $couponPercent > 0 ? $couponCode : null,
+            'couponPercent' => $couponPercent,
+            'subtotal' => $listPrice,
+            'packageDiscount' => $packageDiscount,
+            'couponDiscount' => $couponDiscount,
+            'discount' => $packageDiscount + $couponDiscount,
+            'taxableValue' => $taxableValue,
+            'gst' => $gst,
+            'total' => $total,
+        ];
+    }
+
+    /**
+     * Live price preview for the checkout page (POST .../payments/quote).
+     *
+     * @param array<string, mixed> $data packageId, couponCode?
+     */
+    public function quote(array $data): array
+    {
+        $packageId = (string) ($data['packageId'] ?? '');
+        $isUuid = (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $packageId);
+        $package = $isUuid ? $this->packageRepository->getById($packageId) : null;
+        if (!$package || ($package['status'] ?? 'active') !== 'active') {
+            return $this->failure('package_not_found', 'This package could not be found.', false);
+        }
+        try {
+            $quote = $this->priceQuote($package, (string) ($data['couponCode'] ?? ''));
+        } catch (ServiceException $e) {
+            return $this->failure('invalid_coupon', $e->getMessage(), false);
+        }
+        return ['success' => true, 'data' => ['summary' => $quote]];
     }
 
     /**
@@ -88,6 +150,14 @@ class PaymentService extends BaseService
             if (($existing['status'] ?? 'active') !== 'active') {
                 return $this->failure('package_unavailable', 'This package is no longer available.', false);
             }
+
+            // Price (and coupon) checked outside the circuit breaker so a bad
+            // coupon is reported as such rather than as a gateway outage.
+            try {
+                $this->priceQuote($existing, (string) ($data['couponCode'] ?? ''));
+            } catch (ServiceException $e) {
+                return $this->failure('invalid_coupon', $e->getMessage(), false);
+            }
         }
 
         return $this->executeWithCircuitBreaker(
@@ -115,15 +185,13 @@ class PaymentService extends BaseService
                     );
                 }
 
-                $couponCode = strtoupper(trim($data['couponCode'] ?? ''));
-                $couponPercent = self::COUPONS[$couponCode] ?? 0;
-
-                $listPrice = (float) ($package['originalPrice'] ?? $package['price']);
-                $packageDiscount = $listPrice - (float) $package['price'];
-                $coupon = round(((float) $package['price'] * $couponPercent) / 100);
-                $taxableValue = (float) $package['price'] - $coupon;
-                $gst = round($taxableValue * self::GST_RATE);
-                $total = $taxableValue + $gst;
+                $quote = $this->priceQuote($package, (string) ($data['couponCode'] ?? ''));
+                $listPrice = $quote['subtotal'];
+                $packageDiscount = $quote['packageDiscount'];
+                $coupon = $quote['couponDiscount'];
+                $taxableValue = $quote['taxableValue'];
+                $gst = $quote['gst'];
+                $total = $quote['total'];
 
                 // Payment row is created up front in "created" status so
                 // the return trip has a real internal payment id to look
@@ -138,6 +206,8 @@ class PaymentService extends BaseService
                     'discount' => $packageDiscount + $coupon,
                     'tax' => $gst,
                     'total' => $total,
+                    'couponCode' => $quote['couponCode'],
+                    'couponDiscount' => $coupon,
                     'status' => 'created',
                     'date' => date('Y-m-d H:i:s'),
                 ]);

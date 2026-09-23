@@ -1,7 +1,9 @@
+import * as React from "react";
 import { Link } from "react-router-dom";
-import { Mail, MapPin, Phone } from "lucide-react";
+import { Mail, MapPin, Phone, UserRound } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { useCourses } from "@/hooks/use-catalogue";
+import { useSiteSettings } from "@/hooks/use-site-settings";
 import type { Course } from "@/types";
 
 const buildColumns = (courses: Course[]) => [
@@ -36,6 +38,7 @@ const buildColumns = (courses: Course[]) => [
 export function Footer() {
   const { courses } = useCourses();
   const COLUMNS = buildColumns(courses);
+  const { settings, phone, phoneHref, emailHref, addressLines } = useSiteSettings();
   return (
     <footer className="border-t border-navy-800/40 bg-navy-950 text-white/70">
       <div className="container-nv py-14 lg:py-16">
@@ -50,21 +53,31 @@ export function Footer() {
               <li className="flex items-start gap-2.5">
                 <MapPin className="mt-0.5 size-4 shrink-0 text-saffron-400" aria-hidden />
                 <span>
-                  Nirvona Education Tech Pvt. Ltd.
-                  <br />
-                  Chhatrapati Sambhajinagar, Maharashtra
+                  {settings.orgName}
+                  {addressLines.map((line) => (
+                    <React.Fragment key={line}>
+                      <br />
+                      {line}
+                    </React.Fragment>
+                  ))}
                 </span>
               </li>
+              {settings.contactPersonName && (
+                <li className="flex items-center gap-2.5">
+                  <UserRound className="size-4 shrink-0 text-saffron-400" aria-hidden />
+                  <span>{settings.contactPersonName}</span>
+                </li>
+              )}
               <li className="flex items-center gap-2.5">
                 <Phone className="size-4 shrink-0 text-saffron-400" aria-hidden />
-                <a href="tel:+917709766717" className="transition-colors hover:text-white">
-                  +91 77097 66717
+                <a href={phoneHref} className="transition-colors hover:text-white">
+                  {phone}
                 </a>
               </li>
               <li className="flex items-center gap-2.5">
                 <Mail className="size-4 shrink-0 text-saffron-400" aria-hidden />
-                <a href="mailto:support@nirvona.edu.in" className="transition-colors hover:text-white">
-                  support@nirvona.edu.in
+                <a href={emailHref} className="transition-colors hover:text-white">
+                  {settings.email}
                 </a>
               </li>
             </ul>
@@ -93,7 +106,7 @@ export function Footer() {
 
         <div className="mt-12 flex flex-col gap-4 border-t border-white/10 pt-8 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs">
-            © {new Date().getFullYear()} Nirvona Education Tech Pvt. Ltd. All rights reserved.
+            © {new Date().getFullYear()} {settings.orgName} All rights reserved.
           </p>
           <ul className="flex flex-wrap gap-x-6 gap-y-2 text-xs">
             <li>
@@ -102,17 +115,17 @@ export function Footer() {
               </Link>
             </li>
             <li>
-              <Link to="/contact" className="transition-colors hover:text-white">
+              <Link to="/privacy-policy" className="transition-colors hover:text-white">
                 Privacy policy
               </Link>
             </li>
             <li>
-              <Link to="/contact" className="transition-colors hover:text-white">
+              <Link to="/terms-of-service" className="transition-colors hover:text-white">
                 Terms of service
               </Link>
             </li>
             <li>
-              <Link to="/contact" className="transition-colors hover:text-white">
+              <Link to="/refund-policy" className="transition-colors hover:text-white">
                 Refund policy
               </Link>
             </li>

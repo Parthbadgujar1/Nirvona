@@ -119,6 +119,47 @@ class AuthService extends BaseService
     }
 
     /**
+     * Change the signed-in admin's own password. Requires the current
+     * password and the same strength rule as student passwords.
+     */
+    public function changeAdminPassword(string $adminId, string $currentPassword, string $newPassword): array
+    {
+        return $this->executeWithFallback(
+            function () use ($adminId, $currentPassword, $newPassword) {
+                $admin = $this->adminRepository->getById($adminId);
+                if (!$admin) {
+                    throw new ServiceException('Admin not found.', 'AuthService', false);
+                }
+                if (!$this->adminRepository->verifyPassword($admin['email'], $currentPassword)) {
+                    throw new ServiceException('Your current password is incorrect.', 'AuthService', false);
+                }
+                if (
+                    strlen($newPassword) < 10
+                    || !preg_match('/[A-Z]/', $newPassword)
+                    || !preg_match('/[a-z]/', $newPassword)
+                    || !preg_match('/[0-9]/', $newPassword)
+                ) {
+                    throw new ServiceException(
+                        'New password must be at least 10 characters with an uppercase letter, a lowercase letter and a number.',
+                        'AuthService',
+                        false
+                    );
+                }
+                if (hash_equals($currentPassword, $newPassword)) {
+                    throw new ServiceException('New password must be different from your current password.', 'AuthService', false);
+                }
+
+                $this->adminRepository->update($adminId, ['passwordHash' => password_hash($newPassword, PASSWORD_DEFAULT)]);
+                $this->auditLog('CHANGE_PASSWORD', 'Admin', $adminId, []);
+
+                return ['success' => true, 'message' => 'Password updated successfully'];
+            },
+            null,
+            'changeAdminPassword'
+        );
+    }
+
+    /**
      * Resolve the current user from a verified token's claims
      *
      * @param string $userId

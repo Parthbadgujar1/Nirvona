@@ -95,6 +95,14 @@ class RateLimitMiddleware implements MiddlewareInterface
             $checks[] = ['key' => "rl:register:{$ip}", 'limit' => $this->env('RATE_LIMIT_REGISTER_PER_IP', 30), 'window' => 3600];
         } elseif ($method === 'POST' && str_ends_with($path, '/payments/order')) {
             $checks[] = ['key' => "rl:payorder:{$who}", 'limit' => 10, 'window' => 60];
+        } elseif ($method === 'POST' && str_ends_with($path, '/payments/quote')) {
+            // Coupon codes are typed in by hand, so this endpoint is the one
+            // place a code could be guessed. Limited per token AND per IP
+            // (a fresh login mints a fresh token but not a fresh IP).
+            $checks[] = ['key' => "rl:quote:{$who}", 'limit' => 20, 'window' => 60];
+            $checks[] = ['key' => "rl:quote:ip:{$ip}", 'limit' => 40, 'window' => 600];
+        } elseif ($method === 'POST' && str_ends_with($path, '/change-requests')) {
+            $checks[] = ['key' => "rl:chgreq:{$who}", 'limit' => 10, 'window' => 3600];
         }
 
         return $checks;

@@ -17,7 +17,7 @@ import { EmptyState } from "@/components/shared/states";
 import { LogoMark } from "@/components/brand/logo";
 import { useCourses } from "@/hooks/use-catalogue";
 import { formatCurrency } from "@/lib/format";
-import { checkoutService, priceOrder } from "@/services/checkout.service";
+import { checkoutService, priceOrder, type CouponQuote } from "@/services/checkout.service";
 import { catalogueService } from "@/services/catalogue.service";
 import { useSession } from "@/hooks/use-session";
 import { useAsync } from "@/hooks/use-async";
@@ -52,7 +52,7 @@ export function CheckoutClient() {
   const pkg = packageResult.data;
 
   const [couponInput, setCouponInput] = React.useState("");
-  const [coupon, setCoupon] = React.useState<{ code: string; percent: number } | null>(null);
+  const [coupon, setCoupon] = React.useState<CouponQuote | null>(null);
   const [couponBusy, setCouponBusy] = React.useState(false);
   const [couponError, setCouponError] = React.useState<string>();
   const [processing, setProcessing] = React.useState(false);
@@ -94,7 +94,8 @@ export function CheckoutClient() {
   }
 
   const course = getCourse(pkg.courseSlug);
-  const summary = priceOrder(pkg, coupon?.percent ?? 0);
+  // With a coupon, the total is the server's own quote (what will actually be charged).
+  const summary = coupon?.summary ?? priceOrder(pkg, 0);
 
   async function applyCoupon(event: React.FormEvent) {
     event.preventDefault();
@@ -102,7 +103,7 @@ export function CheckoutClient() {
     setCouponBusy(true);
     setCouponError(undefined);
     try {
-      const result = await checkoutService.applyCoupon(couponInput);
+      const result = await checkoutService.applyCoupon(couponInput, pkg!.id);
       setCoupon(result);
       toast.success(`Coupon ${result.code} applied`, {
         description: `${result.percent}% off your package price.`,
@@ -322,7 +323,7 @@ export function CheckoutClient() {
                     </div>
                   ) : (
                     <form onSubmit={applyCoupon}>
-                      <Field label="Coupon code" htmlFor="coupon" error={couponError} hint="Try NIRVONA10">
+                      <Field label="Coupon code" htmlFor="coupon" error={couponError} hint="Have a coupon from Nirvona? Enter it here.">
                         <div className="flex gap-2">
                           <Input
                             id="coupon"

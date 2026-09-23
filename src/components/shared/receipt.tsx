@@ -1,6 +1,7 @@
 "use client";
 
 import { Logo } from "@/components/brand/logo";
+import { useSiteSettings } from "@/hooks/use-site-settings";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { Payment, Student } from "@/types";
@@ -16,6 +17,7 @@ export function Receipt({
   student: Pick<Student, "id" | "fullName" | "email" | "mobile" | "city" | "state">;
   className?: string;
 }) {
+  const { settings, addressLines } = useSiteSettings();
   const paid = payment.status === "successful";
 
   return (
@@ -59,14 +61,22 @@ export function Receipt({
         <div className="sm:text-right">
           <p className="text-2xs font-bold uppercase tracking-wider text-ink-400">Issued by</p>
           <p className="mt-2 font-display text-sm font-semibold text-navy-900">
-            Nirvona Education Tech Pvt. Ltd.
+            {settings.orgName}
           </p>
           <address className="mt-1 not-italic text-sm leading-relaxed text-ink-600">
-            Chhatrapati Sambhajinagar, Maharashtra
-            <br />
-            GSTIN: 08AABCN1234F1Z5
-            <br />
-            support@nirvona.edu.in
+            {addressLines.map((line) => (
+              <span key={line}>
+                {line}
+                <br />
+              </span>
+            ))}
+            {settings.gstin && (
+              <>
+                GSTIN: {settings.gstin}
+                <br />
+              </>
+            )}
+            {settings.email}
           </address>
         </div>
       </div>
@@ -142,11 +152,9 @@ export function Receipt({
 
       <footer className="border-t border-ink-100 bg-canvas px-6 py-5 sm:px-8">
         <p className="text-xs leading-relaxed text-ink-500">
-          This is a computer-generated receipt and does not require a signature. Enrolment is
-          refundable within 7 days of purchase provided no examination has been attempted under this
-          package. For queries quote receipt number{" "}
-          <span className="font-semibold text-navy-900">{payment.id}</span> at
-          support@nirvona.edu.in.
+          This is a computer-generated receipt and does not require a signature. All purchases are
+          final and non-refundable (see our Refund Policy). For queries quote receipt number{" "}
+          <span className="font-semibold text-navy-900">{payment.id}</span> at {settings.email}.
         </p>
       </footer>
     </article>

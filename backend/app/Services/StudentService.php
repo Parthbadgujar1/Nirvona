@@ -174,10 +174,12 @@ class StudentService extends BaseService
      * @param array $data Updated data
      * @return array Success status
      */
-    public function updateProfile(string $studentId, array $data): array
+    public function updateProfile(string $studentId, array $data, bool $dryRun = false): array
     {
+        // $dryRun: run every check and return the cleaned values without
+        // saving - used to validate a student's change REQUEST up front.
         return $this->executeWithFallback(
-            function () use ($studentId, $data) {
+            function () use ($studentId, $data, $dryRun) {
                 // Ensure student exists
                 $student = $this->studentRepository->getById($studentId);
                 if (!$student) {
@@ -292,6 +294,10 @@ class StudentService extends BaseService
                     if (array_key_exists($optional, $updateData) && $updateData[$optional] === '') {
                         $updateData[$optional] = null;
                     }
+                }
+
+                if ($dryRun) {
+                    return ['success' => true, 'data' => $updateData];
                 }
 
                 if (!empty($updateData)) {

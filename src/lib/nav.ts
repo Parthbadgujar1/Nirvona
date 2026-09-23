@@ -3,7 +3,7 @@ import {
   LayoutDashboard, User, GraduationCap, ClipboardList, IdCard, Trophy,
   BarChart3, Receipt, Bell, LifeBuoy, Users, ShoppingCart, BookOpen,
   Boxes, CalendarClock, Building2, KeyRound, FileCheck2, FileSpreadsheet,
-  Award, PieChart, FileBarChart, Settings, ListChecks,
+  Award, PieChart, FileBarChart, Settings, ListChecks, CalendarDays, Ticket, UserPen,
 } from "lucide-react";
 
 export interface NavItem {
@@ -20,6 +20,7 @@ export const studentNav: NavItem[] = [
   { label: "My Programs", href: "/student/programs", icon: GraduationCap, group: "Learning" },
   { label: "Browse Packages", href: "/student/packages", icon: Boxes, group: "Learning" },
   { label: "My Exams", href: "/student/exams", icon: ClipboardList, group: "Learning" },
+  { label: "Test Schedule", href: "/student/test-schedule", icon: CalendarDays, group: "Learning" },
   { label: "Admit Card", href: "/student/admit-card", icon: IdCard, group: "Learning" },
   { label: "Results", href: "/student/results", icon: Trophy, group: "Performance" },
   { label: "Answer Key", href: "/student/answer-key", icon: ListChecks, group: "Performance" },
@@ -33,8 +34,10 @@ export const adminNav: NavItem[] = [
   { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard, group: "Overview" },
   { label: "Students", href: "/admin/students", icon: Users, group: "People" },
   { label: "Purchases", href: "/admin/purchases", icon: ShoppingCart, group: "People" },
+  { label: "Change Requests", href: "/admin/change-requests", icon: UserPen, group: "People" },
   { label: "Courses", href: "/admin/courses", icon: BookOpen, group: "Catalogue" },
   { label: "Packages", href: "/admin/packages", icon: Boxes, group: "Catalogue" },
+  { label: "Coupons", href: "/admin/coupons", icon: Ticket, group: "Catalogue" },
   { label: "Exams", href: "/admin/exams", icon: CalendarClock, group: "Examinations" },
   { label: "Exam Centres", href: "/admin/exam-centres", icon: Building2, group: "Examinations" },
   { label: "Exam Credentials", href: "/admin/exam-credentials", icon: KeyRound, group: "Examinations" },

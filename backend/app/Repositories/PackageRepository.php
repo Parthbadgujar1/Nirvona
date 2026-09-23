@@ -15,6 +15,38 @@ class PackageRepository extends BaseRepository
     private const JSON_COLUMNS = ['features', 'benefits', 'includes'];
 
     /**
+     * Every read also computes `upcomingTests`: how many of the plan's
+     * scheduled tests are still to come (dated today or later in IST, or not
+     * yet dated). A student who buys mid-session is only ever offered - and
+     * shown - the remaining tests, never the ones already conducted. Plans
+     * without a schedule tier (legacy packages) get NULL.
+     */
+    private const SELECT_PACKAGES = "SELECT p.*,
+            CASE WHEN p.tier IS NULL THEN NULL ELSE (
+                SELECT COALESCE(SUM(ts.testCount), 0)::int FROM test_schedules ts
+                 WHERE ts.courseSlug = p.courseSlug AND ts.tier = p.tier
+                   AND (ts.examDate IS NULL OR ts.examDate >= (NOW() AT TIME ZONE 'Asia/Kolkata')::date)
+            ) END AS upcomingTests
+        FROM packages p";
+
+    /**
+     * Public/purchase view of a package: for a tiered plan, `tests` is the
+     * number of tests still to come rather than the season total.
+     */
+    private const PLAN_ORDER = "p.durationMonths ASC,
+        CASE p.tier WHEN 'Basic' THEN 1 WHEN 'Pro' THEN 2 WHEN 'Pro Max' THEN 3 ELSE 4 END, p.price ASC";
+
+    private function forPublic(array $row): array
+    {
+        $row = $this->decodeJsonColumns($row);
+        if (isset($row['upcomingTests'])) {
+            $row['upcomingTests'] = (int) $row['upcomingTests'];
+            $row['tests'] = $row['upcomingTests'];
+        }
+        return $row;
+    }
+
+    /**
      * Get active packages for a course, cheapest first
      *
      * @param string $courseSlug
@@ -23,12 +55,12 @@ class PackageRepository extends BaseRepository
     public function getByCourse(string $courseSlug): array
     {
         $rows = $this->select(
-            "SELECT * FROM {$this->table}
-             WHERE courseSlug = ? AND status = 'active'
-             ORDER BY durationMonths ASC",
+            self::SELECT_PACKAGES . "
+             WHERE p.courseSlug = ? AND p.status = 'active'
+             ORDER BY " . self::PLAN_ORDER,
             [$courseSlug]
         );
-        return array_map([$this, 'decodeJsonColumns'], $rows);
+        return array_map([$this, 'forPublic'], $rows);
     }
 
     /**
@@ -41,11 +73,11 @@ class PackageRepository extends BaseRepository
     public function getAllActive(): array
     {
         $rows = $this->select(
-            "SELECT * FROM {$this->table}
-             WHERE status = 'active'
-             ORDER BY courseSlug ASC, durationMonths ASC"
+            self::SELECT_PACKAGES . "
+             WHERE p.status = 'active'
+             ORDER BY p.courseSlug ASC, " . self::PLAN_ORDER
         );
-        return array_map([$this, 'decodeJsonColumns'], $rows);
+        return array_map([$this, 'forPublic'], $rows);
     }
 
     /**
@@ -56,10 +88,18 @@ class PackageRepository extends BaseRepository
      */
     public function getAllForAdmin(): array
     {
+        // Admin view keeps the stored season total in `tests`; upcomingTests
+        // is returned alongside it.
         $rows = $this->select(
-            "SELECT * FROM {$this->table} ORDER BY courseSlug ASC, durationMonths ASC"
+            self::SELECT_PACKAGES . " ORDER BY p.courseSlug ASC, " . self::PLAN_ORDER
         );
-        return array_map([$this, 'decodeJsonColumns'], $rows);
+        return array_map(function (array $row) {
+            $row = $this->decodeJsonColumns($row);
+            if (isset($row['upcomingTests'])) {
+                $row['upcomingTests'] = (int) $row['upcomingTests'];
+            }
+            return $row;
+        }, $rows);
     }
 
     /**
@@ -85,8 +125,8 @@ class PackageRepository extends BaseRepository
      */
     public function getById(string $id): ?array
     {
-        $row = parent::getById($id);
-        return $row ? $this->decodeJsonColumns($row) : null;
+        $row = $this->selectOne(self::SELECT_PACKAGES . " WHERE p.id = ? LIMIT 1", [$id]);
+        return $row ? $this->forPublic($row) : null;
     }
 
     /**

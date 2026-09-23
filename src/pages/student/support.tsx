@@ -6,12 +6,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { PageHeader } from "@/components/shared/page-header";
 import { HOME_FAQS } from "@/data/site";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { useSiteSettings } from "@/hooks/use-site-settings";
 
-const CHANNELS = [
-  { icon: Phone, label: "Call support", value: "+91 77097 66717", href: "tel:+917709766717", note: "Mon–Sat, 9 AM – 7 PM IST" },
-  { icon: MessageSquare, label: "WhatsApp", value: "+91 77097 66717", href: "https://wa.me/917709766717", note: "Exam-day support until 8 PM" },
-  { icon: Mail, label: "Email", value: "support@nirvona.edu.in", href: "mailto:support@nirvona.edu.in", note: "Replies within one working day" },
-];
 
 const TOPICS = [
   { title: "Admit card not visible", body: "Admit cards are published 7 days before an examination. If yours has not appeared within 5 days of the exam date, contact support with your student ID and exam code." },
@@ -23,6 +19,12 @@ const TOPICS = [
 
 export default function StudentSupportPage() {
   usePageTitle("Help & Support");
+  const site = useSiteSettings();
+  const CHANNELS = [
+    { icon: Phone, label: "Call support", value: site.phone, href: site.phoneHref, note: "Mon–Sat, 9 AM – 7 PM IST" },
+    { icon: MessageSquare, label: "WhatsApp", value: site.whatsapp, href: site.whatsappHref, note: "Exam-day support until 8 PM" },
+    { icon: Mail, label: "Email", value: site.settings.email, href: site.emailHref, note: "Replies within one working day" },
+  ];
   return (
     <div className="space-y-6">
       <PageHeader

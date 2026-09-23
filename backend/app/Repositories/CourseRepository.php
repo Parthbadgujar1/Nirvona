@@ -23,6 +23,21 @@ class CourseRepository extends BaseRepository
     ];
 
     /**
+     * Public reads show `totalTests` as the most tests any plan of the
+     * course still has to come (a late joiner is never shown the tests that
+     * are already over). Courses without a schedule keep their stored value.
+     */
+    private const PUBLIC_SELECT = "SELECT c.*, COALESCE((
+            SELECT MAX(u.n) FROM (
+                SELECT SUM(ts.testCount)::int AS n FROM test_schedules ts
+                 WHERE ts.courseSlug = c.slug
+                   AND (ts.examDate IS NULL OR ts.examDate >= (NOW() AT TIME ZONE 'Asia/Kolkata')::date)
+                 GROUP BY ts.tier
+            ) u
+        ), c.totalTests) AS totalTests
+        FROM courses c";
+
+    /**
      * Find course by slug
      *
      * @param string $slug
@@ -30,7 +45,7 @@ class CourseRepository extends BaseRepository
      */
     public function findBySlug(string $slug): ?array
     {
-        $row = $this->selectOne("SELECT * FROM {$this->table} WHERE slug = ? LIMIT 1", [$slug]);
+        $row = $this->selectOne(self::PUBLIC_SELECT . " WHERE c.slug = ? LIMIT 1", [$slug]);
         return $row ? $this->decodeJsonColumns($row) : null;
     }
 
@@ -41,7 +56,7 @@ class CourseRepository extends BaseRepository
      */
     public function getActive(): array
     {
-        $rows = $this->select("SELECT * FROM {$this->table} WHERE status = 'active' ORDER BY name");
+        $rows = $this->select(self::PUBLIC_SELECT . " WHERE c.status = 'active' ORDER BY c.name");
         return array_map([$this, 'decodeJsonColumns'], $rows);
     }
 

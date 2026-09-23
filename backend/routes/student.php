@@ -9,7 +9,9 @@ use Nirvona\Controllers\{
     ExamCredentialController,
     PaymentController,
     StudentResponseController,
-    NotificationController
+    NotificationController,
+    ProfileChangeRequestController,
+    TestScheduleController
 };
 use Nirvona\Middleware\AuthMiddleware;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -90,6 +92,14 @@ return function (App $app) {
         // student (id injected from the JWT, never the client), and verify
         // also gets that id so it can refuse someone else's payment.
         $group->post('/payments/order', $withId(PaymentController::class, 'createOrder'));
+        $group->post('/payments/quote', $withId(PaymentController::class, 'quote'));
+
+        // Profile edits are by admin approval only.
+        $group->post('/change-requests', $withId(ProfileChangeRequestController::class, 'create'));
+        $group->get('/change-requests', $withId(ProfileChangeRequestController::class, 'listMine'));
+
+        // Upcoming tests for the student's own active plans.
+        $group->get('/test-schedule', $withId(TestScheduleController::class, 'forStudent'));
         $group->post('/payments/{paymentId}/verify', $withId(PaymentController::class, 'verify'));
         $group->get('/exams', [ExamController::class, 'list']);
         $group->get('/results', $withId(ResultController::class, 'getStudentResults'));

@@ -34,6 +34,9 @@ const FaqsPage = lazy(() => import("@/pages/site/faqs"));
 const PackagesPage = lazy(() => import("@/pages/site/packages"));
 const PackageDetailPage = lazy(() => import("@/pages/site/package-detail"));
 const TestSchedulePage = lazy(() => import("@/pages/site/test-schedule"));
+const RefundPolicyPage = lazy(() => import("@/pages/site/refund-policy"));
+const PrivacyPolicyPage = lazy(() => import("@/pages/site/privacy-policy"));
+const TermsOfServicePage = lazy(() => import("@/pages/site/terms-of-service"));
 
 const LoginPage = lazy(() => import("@/pages/auth/login"));
 const RegisterPage = lazy(() => import("@/pages/auth/register"));
@@ -71,6 +74,8 @@ const AdminAnalyticsPage = lazy(() => import("@/pages/admin/analytics"));
 const AdminReportsPage = lazy(() => import("@/pages/admin/reports"));
 const AdminNotificationsPage = lazy(() => import("@/pages/admin/notifications"));
 const AdminSettingsPage = lazy(() => import("@/pages/admin/settings"));
+const AdminCouponsPage = lazy(() => import("@/pages/admin/coupons"));
+const AdminChangeRequestsPage = lazy(() => import("@/pages/admin/change-requests"));
 
 const StudentDashboardPage = lazy(() => import("@/pages/student/dashboard"));
 const StudentProgramsPage = lazy(() => import("@/pages/student/programs"));
@@ -85,6 +90,7 @@ const StudentPaymentsPage = lazy(() => import("@/pages/student/payments"));
 const StudentNotificationsPage = lazy(() => import("@/pages/student/notifications"));
 const StudentSupportPage = lazy(() => import("@/pages/student/support"));
 const StudentProfilePage = lazy(() => import("@/pages/student/profile"));
+const StudentTestSchedulePage = lazy(() => import("@/pages/student/test-schedule"));
 
 /**
  * Route table replacing the Next.js App Router's file-based routing
@@ -120,6 +126,9 @@ export function App() {
           <Route path="/packages" element={<PackagesPage />} />
           <Route path="/packages/:id" element={<PackageDetailPage />} />
           <Route path="/test-schedule" element={<TestSchedulePage />} />
+          <Route path="/refund-policy" element={<RefundPolicyPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="/terms-of-service" element={<TermsOfServicePage />} />
         </Route>
 
         <Route element={<AuthLayout />}>
@@ -153,6 +162,8 @@ export function App() {
           <Route path="reports" element={<AdminReportsPage />} />
           <Route path="notifications" element={<AdminNotificationsPage />} />
           <Route path="settings" element={<AdminSettingsPage />} />
+          <Route path="coupons" element={<AdminCouponsPage />} />
+          <Route path="change-requests" element={<AdminChangeRequestsPage />} />
         </Route>
 
         <Route path="/student" element={<StudentLayout />}>
@@ -170,6 +181,7 @@ export function App() {
           <Route path="notifications" element={<StudentNotificationsPage />} />
           <Route path="support" element={<StudentSupportPage />} />
           <Route path="profile" element={<StudentProfilePage />} />
+          <Route path="test-schedule" element={<StudentTestSchedulePage />} />
         </Route>
 
         <Route path="/404" element={<NotFoundPage />} />

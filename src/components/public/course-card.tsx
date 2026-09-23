@@ -63,7 +63,7 @@ export function CourseCard({ course, className }: { course: Course; className?: 
               Tests
             </dt>
             <dd className="mt-1 font-display text-base font-bold tabular text-navy-900">
-              {course.totalTests}
+              {course.totalTests > 0 ? course.totalTests : "Soon"}
             </dd>
           </div>
           <div>

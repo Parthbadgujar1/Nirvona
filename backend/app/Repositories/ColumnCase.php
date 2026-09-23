@@ -150,6 +150,29 @@ class ColumnCase
         'isread' => 'isRead',
         'readat' => 'readAt',
 
+        // coupons / payments coupon columns
+        'maxuses' => 'maxUses',
+        'expiresat' => 'expiresAt',
+        'couponcode' => 'couponCode',
+        'coupondiscount' => 'couponDiscount',
+        'usedcount' => 'usedCount',
+
+        // test schedules / package plan
+        'sno' => 'sNo',
+        'pwdate' => 'pwDate',
+        'testname' => 'testName',
+        'testnumber' => 'testNumber',
+        'testtype' => 'testType',
+        'testpattern' => 'testPattern',
+        'testcount' => 'testCount',
+        'upcomingtests' => 'upcomingTests',
+
+        // profile change requests
+        'adminnote' => 'adminNote',
+        'resolvedat' => 'resolvedAt',
+        'resolvedby' => 'resolvedBy',
+        'studentemail' => 'studentEmail',
+
         // common to every table
         'createdat' => 'createdAt',
         'updatedat' => 'updatedAt',
@@ -174,7 +197,7 @@ class ColumnCase
      */
     private const NUMERIC_FIELDS = [
         // payments
-        'amount' => true, 'discount' => true, 'tax' => true, 'total' => true,
+        'amount' => true, 'discount' => true, 'tax' => true, 'total' => true, 'couponDiscount' => true,
         // packages
         'price' => true, 'originalPrice' => true,
         // results / leaderboards / topic performance

@@ -8,7 +8,9 @@ use Nirvona\Controllers\{
     PackageController,
     AnswerKeyController,
     StudentResponseController,
-    CurriculumController
+    CurriculumController,
+    SiteSettingsController,
+    TestScheduleController
 };
 use Nirvona\Middleware\AuthMiddleware;
 use Nirvona\Middleware\PublicCacheMiddleware;
@@ -55,6 +57,10 @@ return function (App $app) {
         $group->get('/courses/{slug}/packages', [CourseController::class, 'getPackages']);
         $group->get('/packages', [PackageController::class, 'list']);
         $group->get('/packages/{id}', [PackageController::class, 'get']);
+        // Contact details (address, phone, contact person...) the admin edits in Settings.
+        $group->get('/site-settings', [SiteSettingsController::class, 'get']);
+        // Upcoming tests only - already-conducted tests and the source calendar dates are never exposed.
+        $group->get('/courses/{slug}/schedule', [TestScheduleController::class, 'forCourse']);
 
         $group->get('/courses/{slug}/subjects', [CurriculumController::class, 'listSubjects']);
         $group->get('/courses/{slug}/topics', [CurriculumController::class, 'listTopicsByCourse']);

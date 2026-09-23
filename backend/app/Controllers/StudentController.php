@@ -85,6 +85,23 @@ class StudentController
     {
         $studentId = $args['id'];
         $data = json_decode($request->getBody(), true) ?? [];
+        // Students can no longer edit their own profile (name, gender,
+        // mobile, ...): they file a change request for an admin to approve
+        // (see ProfileChangeRequestController). Only their notification
+        // channel preferences remain self-service; anything else in the
+        // body is discarded, never applied.
+        $data = is_array($data) ? array_intersect_key($data, ['notificationPrefs' => true]) : [];
+        if ($data === []) {
+            $result = [
+                'success' => false,
+                'error' => [
+                    'code' => 'profile_locked',
+                    'message' => 'Profile details can only be changed by the admin. Please send a change request.',
+                ],
+            ];
+            $response->getBody()->write(json_encode($result));
+            return $response->withStatus(403)->withHeader('Content-Type', 'application/json');
+        }
         $result = $this->studentService->updateProfile($studentId, $data);
 
         $statusCode = $result['success'] ? 200 : 400;

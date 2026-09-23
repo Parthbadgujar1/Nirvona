@@ -16,7 +16,11 @@ use Nirvona\Controllers\{
     QuestionController,
     CurriculumController,
     ScoringController,
-    NotificationController
+    NotificationController,
+    CouponController,
+    SiteSettingsController,
+    ProfileChangeRequestController,
+    AuthController
 };
 use Nirvona\Middleware\AdminMiddleware;
 
@@ -56,6 +60,22 @@ return function (App $app) {
         $group->post('/packages', [PackageController::class, 'create']);
         $group->put('/packages/{id}', [PackageController::class, 'update']);
         $group->delete('/packages/{id}', [PackageController::class, 'delete']);
+
+        // Organisation settings (address, phone, contact person...) shown on the public site
+        $group->get('/site-settings', [SiteSettingsController::class, 'get']);
+        $group->put('/site-settings', [SiteSettingsController::class, 'update']);
+        $group->put('/me/password', [AuthController::class, 'changeAdminPassword']);
+
+        // Coupons (handed to students manually by the admin)
+        $group->get('/coupons', [CouponController::class, 'list']);
+        $group->post('/coupons', [CouponController::class, 'create']);
+        $group->put('/coupons/{id}', [CouponController::class, 'update']);
+        $group->delete('/coupons/{id}', [CouponController::class, 'delete']);
+
+        // Student profile change requests
+        $group->get('/change-requests', [ProfileChangeRequestController::class, 'listForAdmin']);
+        $group->post('/change-requests/{id}/approve', [ProfileChangeRequestController::class, 'approve']);
+        $group->post('/change-requests/{id}/reject', [ProfileChangeRequestController::class, 'reject']);
 
         // Student Management
         $group->get('/students', [AdminController::class, 'listStudents']);

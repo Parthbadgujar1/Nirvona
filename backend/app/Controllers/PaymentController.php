@@ -39,6 +39,21 @@ class PaymentController
     }
 
     /**
+     * POST /api/students/me/payments/quote
+     *
+     * Price preview (with an optional coupon code) for the checkout page.
+     * The same calculation createOrder() charges, so what the student sees
+     * is exactly what they pay.
+     */
+    public function quote(Request $request, Response $response, array $args): Response
+    {
+        $data = json_decode((string) $request->getBody(), true) ?? [];
+        $result = $this->paymentService->quote(is_array($data) ? $data : []);
+        $response->getBody()->write(json_encode($result));
+        return $response->withStatus($result['success'] ? 200 : 400)->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
      * GET /api/payments/{id}
      */
     public function get(Request $request, Response $response, array $args): Response

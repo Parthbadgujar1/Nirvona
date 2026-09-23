@@ -119,6 +119,8 @@ class PackageService extends BaseService
                     );
                 }
 
+                $data = $this->normalizePricing($this->whitelist($data), null);
+                $this->assertSellable($data + ['status' => 'active']);
                 $package = $this->packageRepository->create($data);
                 $this->auditLog('CREATE', 'Package', $package['id'], ['courseSlug' => $data['courseSlug']]);
 
@@ -140,10 +142,13 @@ class PackageService extends BaseService
     {
         return $this->executeWithFallback(
             function () use ($id, $data) {
-                if (!$this->packageRepository->getById($id)) {
+                $existing = $this->packageRepository->getById($id);
+                if (!$existing) {
                     throw new ServiceException("Package not found: {$id}", 'PackageService', false);
                 }
 
+                $data = $this->normalizePricing($this->whitelist($data), $existing);
+                $this->assertSellable($data + $existing);
                 $this->packageRepository->update($id, $data);
                 $this->auditLog('UPDATE', 'Package', $id, ['fields' => array_keys($data)]);
 
@@ -156,6 +161,90 @@ class PackageService extends BaseService
             null,
             'updatePackage'
         );
+    }
+
+    /** Columns an admin may write; anything else in the request body is dropped. */
+    private const WRITABLE = [
+        'courseSlug', 'name', 'duration', 'durationLabel', 'durationMonths', 'price', 'originalPrice',
+        'discountPercent', 'tests', 'recommended', 'tagline', 'features', 'benefits', 'includes',
+        'status', 'tier',
+    ];
+
+    /** An active package must have a real price - nothing may be sold for free by accident. */
+    private function assertSellable(array $final): void
+    {
+        if (($final['status'] ?? 'active') === 'active' && (float) ($final['price'] ?? 0) <= 0) {
+            throw new ServiceException(
+                'Set a price above zero before making this package active.',
+                'PackageService',
+                false
+            );
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function whitelist(array $data): array
+    {
+        return array_intersect_key($data, array_flip(self::WRITABLE));
+    }
+
+    /**
+     * Keep price, original price and discount % consistent so the admin can
+     * enter either the discount % or the discounted price:
+     *  - percent given without a price  -> price = original x (1 - percent)
+     *  - otherwise the percent is recomputed from the two prices
+     *  - no original price -> no discount (percent 0)
+     *
+     * @param array<string, mixed> $data      incoming (whitelisted) fields
+     * @param ?array<string, mixed> $existing current row when updating
+     * @return array<string, mixed>
+     */
+    private function normalizePricing(array $data, ?array $existing): array
+    {
+        $touchesPricing = array_key_exists('price', $data)
+            || array_key_exists('originalPrice', $data)
+            || array_key_exists('discountPercent', $data);
+        if (!$touchesPricing) {
+            return $data;
+        }
+
+        $has = fn(string $k) => array_key_exists($k, $data);
+        $original = $has('originalPrice') ? $data['originalPrice'] : ($existing['originalPrice'] ?? null);
+        $original = ($original === null || $original === '') ? null : (float) $original;
+        $price = $has('price') ? $data['price'] : ($existing['price'] ?? 0);
+        $price = (float) $price;
+        $percent = $has('discountPercent') ? $data['discountPercent'] : null;
+
+        if ($price < 0 || ($original !== null && $original < 0)) {
+            throw new ServiceException('Prices cannot be negative.', 'PackageService', false);
+        }
+        if ($original === null || $original == 0.0) {
+            $data['originalPrice'] = null;
+            $data['discountPercent'] = 0;
+            return $data;
+        }
+
+        if ($percent !== null && $percent !== '' && !$has('price')) {
+            if (!is_numeric($percent) || $percent < 0 || $percent > 100) {
+                throw new ServiceException('Discount must be between 0 and 100 percent.', 'PackageService', false);
+            }
+            $price = round($original * (100 - (float) $percent) / 100, 2);
+        }
+        if ($price > $original) {
+            throw new ServiceException(
+                'The selling price cannot be higher than the original price.',
+                'PackageService',
+                false
+            );
+        }
+
+        $data['originalPrice'] = $original;
+        $data['price'] = $price;
+        $data['discountPercent'] = (int) round(($original - $price) / $original * 100);
+        return $data;
     }
 
     /**

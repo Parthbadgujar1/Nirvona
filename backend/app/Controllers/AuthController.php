@@ -47,6 +47,24 @@ class AuthController
     }
 
     /**
+     * PUT /api/admin/me/password (AdminMiddleware) - the admin id comes
+     * from the verified token.
+     */
+    public function changeAdminPassword(Request $request, Response $response): Response
+    {
+        $data = json_decode((string) $request->getBody(), true) ?? [];
+        $result = $this->authService->changeAdminPassword(
+            (string) $request->getAttribute('userId'),
+            (string) ($data['currentPassword'] ?? ''),
+            (string) ($data['newPassword'] ?? '')
+        );
+        $response->getBody()->write(json_encode($result));
+        return $response
+            ->withStatus($result['success'] ? 200 : 400)
+            ->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
      * GET /api/auth/me
      *
      * Protected by AuthMiddleware - userId/role come from the verified

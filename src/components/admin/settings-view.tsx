@@ -1,48 +1,34 @@
 "use client";
 
 import * as React from "react";
-import { KeyRound, Save, Shield, ShieldCheck, Users } from "lucide-react";
+import { KeyRound, Save, Shield, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Field, Input, Textarea } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { Switch } from "@/components/ui/checkbox";
 import { Avatar } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/shared/page-header";
+import { ErrorState, LoadingState } from "@/components/shared/states";
 import { useSession } from "@/hooks/use-session";
+import { useAsync } from "@/hooks/use-async";
+import { siteService } from "@/services/site.service";
+import type { SiteSettings } from "@/types";
 
 export function SettingsView() {
   // There is exactly one admin account - no super-admin/exam-manager/
   // support sub-roles and no second admin to invite (see
   // AdminMiddleware, which only ever gates on "admin" vs "student").
-  // The profile card shows the real signed-in admin instead of a
-  // fabricated one.
   const { session } = useSession("admin");
-  const [saving, setSaving] = React.useState(false);
-  const [prefs, setPrefs] = React.useState({
-    twoFactor: true,
-    exportAudit: true,
-    autoPublishKeys: false,
-    credentialMasking: true,
-  });
-
-  async function save(event: React.FormEvent) {
-    event.preventDefault();
-    setSaving(true);
-    await new Promise((r) => setTimeout(r, 900));
-    setSaving(false);
-    toast.success("Settings saved");
-  }
+  const settings = useAsync(() => siteService.getAdminSettings(), []);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Settings"
-        description="Organisation profile, examination defaults, administrator account and security controls."
+        description="Organisation details shown on the website, your administrator account and password."
       />
 
       <Card className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center">
@@ -67,127 +53,14 @@ export function SettingsView() {
       <Tabs defaultValue="organisation">
         <TabsList variant="underline">
           <TabsTrigger variant="underline" value="organisation">Organisation</TabsTrigger>
-          <TabsTrigger variant="underline" value="exams">Examination defaults</TabsTrigger>
           <TabsTrigger variant="underline" value="team">Administrator</TabsTrigger>
-          <TabsTrigger variant="underline" value="security">Security</TabsTrigger>
+          <TabsTrigger variant="underline" value="security">Password</TabsTrigger>
         </TabsList>
 
         <TabsContent value="organisation">
-          <form onSubmit={save}>
-            <Card className="p-6">
-              <h3 className="font-display text-base font-semibold text-navy-900">
-                Organisation profile
-              </h3>
-              <p className="mt-1 text-sm text-ink-500">
-                Appears on receipts, admit cards and outbound notifications.
-              </p>
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <Field label="Legal name" htmlFor="org-name">
-                  <Input id="org-name" defaultValue="Nirvona Education Tech Pvt. Ltd." />
-                </Field>
-                <Field label="GSTIN" htmlFor="org-gst">
-                  <Input id="org-gst" defaultValue="08AABCN1234F1Z5" />
-                </Field>
-                <Field label="Support email" htmlFor="org-email">
-                  <Input id="org-email" type="email" defaultValue="support@nirvona.edu.in" />
-                </Field>
-                <Field label="Support phone" htmlFor="org-phone">
-                  <Input id="org-phone" defaultValue="+91 77097 66717" />
-                </Field>
-                <Field label="Registered address" htmlFor="org-address" className="sm:col-span-2">
-                  <Textarea
-                    id="org-address"
-                    rows={3}
-                    defaultValue={"Chhatrapati Sambhajinagar, Maharashtra"}
-                  />
-                </Field>
-              </div>
-              <div className="mt-6 flex justify-end border-t border-ink-100 pt-5">
-                <Button type="submit" loading={saving}>
-                  <Save />
-                  Save changes
-                </Button>
-              </div>
-            </Card>
-          </form>
-        </TabsContent>
-
-        <TabsContent value="exams">
-          <form onSubmit={save}>
-            <Card className="p-6">
-              <h3 className="font-display text-base font-semibold text-navy-900">
-                Examination defaults
-              </h3>
-              <p className="mt-1 text-sm text-ink-500">
-                Applied to every new examination; can be overridden per exam.
-              </p>
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <Field label="Default duration (minutes)" htmlFor="d-duration">
-                  <Input id="d-duration" type="number" defaultValue={180} />
-                </Field>
-                <Field label="Default question count" htmlFor="d-questions">
-                  <Input id="d-questions" type="number" defaultValue={90} />
-                </Field>
-                <Field label="Marks per correct answer" htmlFor="d-marks">
-                  <Input id="d-marks" type="number" defaultValue={4} />
-                </Field>
-                <Field label="Negative marks per incorrect answer" htmlFor="d-neg">
-                  <Input id="d-neg" type="number" defaultValue={1} />
-                </Field>
-                <Field
-                  label="Admit card release"
-                  htmlFor="d-admit"
-                  hint="Days before the examination that admit cards are published."
-                >
-                  <Select id="d-admit" defaultValue="7">
-                    {[5, 7, 10, 14].map((d) => (
-                      <option key={d} value={d}>
-                        {d} days before
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-                <Field
-                  label="Credential issue window"
-                  htmlFor="d-cred"
-                  hint="Hours before the examination that exam-hall logins become visible."
-                >
-                  <Select id="d-cred" defaultValue="48">
-                    {[24, 48, 72].map((h) => (
-                      <option key={h} value={h}>
-                        {h} hours before
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-              </div>
-
-              <ul className="mt-6 divide-y divide-ink-100 border-t border-ink-100">
-                <li className="flex items-center justify-between gap-4 py-4">
-                  <div>
-                    <p className="text-sm font-medium text-navy-900">
-                      Auto-publish answer keys after evaluation
-                    </p>
-                    <p className="text-xs text-ink-500">
-                      When off, an administrator must publish each key manually.
-                    </p>
-                  </div>
-                  <Switch
-                    label="Auto-publish answer keys"
-                    checked={prefs.autoPublishKeys}
-                    onCheckedChange={(v) => setPrefs((p) => ({ ...p, autoPublishKeys: v }))}
-                  />
-                </li>
-              </ul>
-
-              <div className="mt-6 flex justify-end border-t border-ink-100 pt-5">
-                <Button type="submit" loading={saving}>
-                  <Save />
-                  Save defaults
-                </Button>
-              </div>
-            </Card>
-          </form>
+          {settings.status === "loading" && <LoadingState label="Loading settings" />}
+          {settings.status === "error" && <ErrorState onRetry={settings.reload} />}
+          {settings.data && <OrganisationForm initial={settings.data} onSaved={settings.reload} />}
         </TabsContent>
 
         <TabsContent value="team">
@@ -225,86 +98,132 @@ export function SettingsView() {
           <div className="space-y-5">
             <Alert tone="warning" title="Credential handling">
               Examination credentials are stored separately from portal accounts and are never
-              exposed through the student-facing API. Bulk credential exports are audit-logged
-              against the administrator who requested them.
+              exposed through the student-facing API.
             </Alert>
-
-            <Card className="p-6">
-              <div className="flex items-center gap-2.5">
-                <ShieldCheck className="size-5 text-ember-600" aria-hidden />
-                <h3 className="font-display text-base font-semibold text-navy-900">
-                  Security controls
-                </h3>
-              </div>
-              <ul className="mt-5 divide-y divide-ink-100">
-                {[
-                  {
-                    key: "twoFactor",
-                    label: "Require two-factor authentication",
-                    detail: "All administrator accounts must complete a second factor at sign-in.",
-                  },
-                  {
-                    key: "exportAudit",
-                    label: "Audit-log every data export",
-                    detail: "Records who exported which dataset, with which filters, and when.",
-                  },
-                  {
-                    key: "credentialMasking",
-                    label: "Mask exam passwords by default",
-                    detail: "Passwords stay hidden in tables until explicitly revealed.",
-                  },
-                ].map((item) => (
-                  <li key={item.key} className="flex items-center justify-between gap-4 py-4">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-navy-900">{item.label}</p>
-                      <p className="text-xs leading-relaxed text-ink-500">{item.detail}</p>
-                    </div>
-                    <Switch
-                      label={item.label}
-                      checked={prefs[item.key as keyof typeof prefs]}
-                      onCheckedChange={(v) => {
-                        setPrefs((p) => ({ ...p, [item.key]: v }));
-                        toast.success(`${item.label} ${v ? "enabled" : "disabled"}`);
-                      }}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center gap-2.5">
-                <KeyRound className="size-5 text-navy-700" aria-hidden />
-                <h3 className="font-display text-base font-semibold text-navy-900">
-                  Change your password
-                </h3>
-              </div>
-              <form
-                className="mt-5 grid gap-4 sm:grid-cols-3"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  toast.success("Password updated");
-                }}
-              >
-                <Field label="Current password" htmlFor="a-cur">
-                  <Input id="a-cur" type="password" autoComplete="current-password" />
-                </Field>
-                <Field label="New password" htmlFor="a-new">
-                  <Input id="a-new" type="password" autoComplete="new-password" />
-                </Field>
-                <Field label="Confirm password" htmlFor="a-conf">
-                  <Input id="a-conf" type="password" autoComplete="new-password" />
-                </Field>
-                <div className="sm:col-span-3">
-                  <Button type="submit" size="md">
-                    Update password
-                  </Button>
-                </div>
-              </form>
-            </Card>
+            <PasswordForm />
           </div>
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function OrganisationForm({ initial, onSaved }: { initial: SiteSettings; onSaved: () => void }) {
+  const [form, setForm] = React.useState<SiteSettings>(initial);
+  const [saving, setSaving] = React.useState(false);
+  const set = (key: keyof SiteSettings) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  async function save(event: React.FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const saved = await siteService.updateSettings(form);
+      setForm(saved);
+      onSaved();
+      toast.success("Settings saved", { description: "The website now shows these details." });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save settings.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form onSubmit={save}>
+      <Card className="p-6">
+        <h3 className="font-display text-base font-semibold text-navy-900">Organisation profile</h3>
+        <p className="mt-1 text-sm text-ink-500">
+          Shown in the website footer and contact page, on the student support page and on payment
+          receipts. Changes appear on the site straight away.
+        </p>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <Field label="Organisation name" htmlFor="org-name">
+            <Input id="org-name" value={form.orgName} onChange={set("orgName")} maxLength={120} required />
+          </Field>
+          <Field label="GSTIN" htmlFor="org-gst" hint="Optional. Printed on receipts only when filled in.">
+            <Input id="org-gst" value={form.gstin} onChange={set("gstin")} maxLength={15} />
+          </Field>
+          <Field label="Address" htmlFor="org-address" className="sm:col-span-2" hint="Shown first in the footer. Use a new line for each line of the address.">
+            <Textarea id="org-address" rows={3} value={form.address} onChange={set("address")} maxLength={500} required />
+          </Field>
+          <Field
+            label="Contact person name"
+            htmlFor="org-person"
+            className="sm:col-span-2"
+            hint="Shown in the footer between the address and the phone number. Leave blank to hide it."
+          >
+            <Input id="org-person" value={form.contactPersonName} onChange={set("contactPersonName")} maxLength={100} />
+          </Field>
+          <Field label="Phone number" htmlFor="org-phone">
+            <Input id="org-phone" value={form.phone} onChange={set("phone")} maxLength={20} required />
+          </Field>
+          <Field label="WhatsApp number" htmlFor="org-wa" hint="Leave blank to use the phone number.">
+            <Input id="org-wa" value={form.whatsapp} onChange={set("whatsapp")} maxLength={20} />
+          </Field>
+          <Field label="Support email" htmlFor="org-email" className="sm:col-span-2">
+            <Input id="org-email" type="email" value={form.email} onChange={set("email")} maxLength={120} required />
+          </Field>
+        </div>
+        <div className="mt-6 flex justify-end border-t border-ink-100 pt-5">
+          <Button type="submit" loading={saving}>
+            <Save />
+            Save changes
+          </Button>
+        </div>
+      </Card>
+    </form>
+  );
+}
+
+function PasswordForm() {
+  const [current, setCurrent] = React.useState("");
+  const [next, setNext] = React.useState("");
+  const [confirm, setConfirm] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (next !== confirm) {
+      toast.error("The new passwords do not match.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await siteService.changeAdminPassword(current, next);
+      setCurrent("");
+      setNext("");
+      setConfirm("");
+      toast.success("Password updated");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update the password.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card className="p-6">
+      <div className="flex items-center gap-2.5">
+        <KeyRound className="size-5 text-navy-700" aria-hidden />
+        <h3 className="font-display text-base font-semibold text-navy-900">Change your password</h3>
+      </div>
+      <form className="mt-5 grid gap-4 sm:grid-cols-3" onSubmit={submit}>
+        <Field label="Current password" htmlFor="a-cur">
+          <Input id="a-cur" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} required />
+        </Field>
+        <Field label="New password" htmlFor="a-new" hint="At least 10 characters, with upper-case, lower-case and a number.">
+          <Input id="a-new" type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} required />
+        </Field>
+        <Field label="Confirm password" htmlFor="a-conf">
+          <Input id="a-conf" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
+        </Field>
+        <div className="sm:col-span-3">
+          <Button type="submit" size="md" loading={saving}>
+            Update password
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 }

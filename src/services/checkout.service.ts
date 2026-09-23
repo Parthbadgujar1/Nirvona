@@ -1,6 +1,6 @@
 import type { Package, Payment } from "@/types";
 import type { Session } from "@/services/auth.service";
-import { resolve, post, ApiError } from "./http";
+import { post, ApiError } from "./http";
 
 export interface CheckoutDraft {
   packageId: string;
@@ -33,14 +33,12 @@ export function priceOrder(pkg: Package, couponPercent = 0): OrderSummary {
   };
 }
 
-/** Frontend-only coupon table, used purely to give instant "valid code"
- * feedback in the UI. The backend keeps its own copy (PaymentService::COUPONS)
- * and recomputes the discount itself when the order is created - this
- * table is never trusted for the actual charge. */
-const COUPONS: Record<string, number> = {
-  NIRVONA10: 10,
-  FIRSTCBT: 15,
-};
+export interface CouponQuote {
+  code: string;
+  percent: number;
+  /** The server's own price breakdown with this coupon applied - exactly what will be charged. */
+  summary: OrderSummary;
+}
 
 interface StartedPayment {
   paymentId: string;
@@ -67,15 +65,19 @@ interface BackendPaymentRow {
 }
 
 export const checkoutService = {
-  applyCoupon: async (code: string) => {
-    const percent = COUPONS[code.trim().toUpperCase()];
-    if (!percent) throw new ApiError("This coupon code is not valid.", 422, "invalid_coupon");
-    // No endpoint: this is deliberately a frontend-only coupon table (see
-    // comment above), not something the backend validates. `500` was
-    // meant as the simulated latency (4th arg) but landed in the
-    // `endpoint` slot instead, which - now that USE_MOCK_DATA is false -
-    // would have made this try to fetch literally "/500" from the API.
-    return resolve({ code: code.trim().toUpperCase(), percent }, undefined, undefined, 500);
+  /**
+   * Validate an admin-issued coupon against a package. The backend owns the
+   * coupon table (Admin -> Coupons) and prices the order; the response is
+   * the exact breakdown that will be charged.
+   */
+  applyCoupon: async (code: string, packageId: string): Promise<CouponQuote> => {
+    const result = await post<{ summary: OrderSummary & { couponCode: string | null; couponPercent: number } }>(
+      "/students/me/payments/quote",
+      { packageId, couponCode: code },
+    );
+    const { couponCode, couponPercent, ...summary } = result.summary;
+    if (!couponCode) throw new ApiError("This coupon code is not valid.", 422, "invalid_coupon");
+    return { code: couponCode, percent: couponPercent, summary };
   },
 
   /**
